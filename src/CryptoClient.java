@@ -1,5 +1,4 @@
 import java.net.Socket;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.BufferedReader;
@@ -70,7 +69,6 @@ public class CryptoClient extends Thread {
 				memberSocket.close();
 				CryptoServer.removeChatMember(this);
 			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
 	}
