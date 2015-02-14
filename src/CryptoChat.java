@@ -19,11 +19,11 @@ import java.awt.event.ComponentEvent;
 import java.awt.ComponentOrientation;
 import java.awt.event.ComponentAdapter;
 
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JScrollPane;
@@ -36,8 +36,8 @@ public class CryptoChat extends JFrame {
 	// General fields.
 	private static final long serialVersionUID = 4297662718521661000L;
 	Point startScreenSize = new Point(400, 220);
-	LinkedList<Component> startScreenList;
-	LinkedList<Component> hostScreenList;
+	// LinkedList<Component> startScreenList;
+	// LinkedList<Component> hostScreenList;
 	LinkedList<Component> joinScreenList;
 	LinkedList<String> chatHistory = new LinkedList<String>();
 	static JPanel panel = new JPanel();
@@ -58,6 +58,7 @@ public class CryptoChat extends JFrame {
 
 	// START-screen join components.
 	JToggleButton joinButton;
+	JButton joinButtonStartOpt;
 
 	// HOSTING-screen settings and components.
 	Point hostScreenSize = new Point(700, 450);
@@ -72,7 +73,7 @@ public class CryptoChat extends JFrame {
 	// JOIN-screen settings and components.
 	Point joinScreenSize = new Point(500, 500);
 	JButton alignChatJoin;
-	private JTextField hostPhraseFieldOpt;
+	JTextField hostPhraseFieldOpt;
 
 	public CryptoChat() {
 		// Setup main screen style, location and behavior.
@@ -94,10 +95,9 @@ public class CryptoChat extends JFrame {
 		setupJoinScreen();
 
 		// Linking the components to the modes and set mode-visibility.
-		linkListAllComponents();
-		setComponentsToState(startScreenList, true);
-		setComponentsToState(hostScreenList, false);
-		setComponentsToState(joinScreenList, false);
+		setStartCompsTo(true);
+		setHostCompsTo(false);
+		setJoinCompsTo(false);
 
 		// Starting the window.
 		panel = new JPanel();
@@ -111,29 +111,11 @@ public class CryptoChat extends JFrame {
 		});
 	}
 
-	private void linkListAllComponents() {
-		// Linking START-screen;
-		startScreenList = new LinkedList<Component>();
-		startScreenList.add(serverButton);
-		startScreenList.add(joinButton);
-
-		// Linking HOST-screen;
-		hostScreenList = new LinkedList<Component>();
-		hostScreenList.add(hostChatLabel);
-		hostScreenList.add(hostAlignChat);
-		hostScreenList.add(hostChatTextboxFrame);
-		hostScreenList.add(hostChatTextbox);
-		hostScreenList.add(hostInputBox);
-
-		// Linking JOIN-screen;
-		joinScreenList = new LinkedList<Component>();
-		// joinScreenList.add(alignChatJoin);
-	}
-
 	private void setupStartScreen() {
 		// Setting the HOST button.
 		serverButton = new JToggleButton();
-		serverButton.setText("<html><center><u>HOST</u><br><br>a secure chat room</center></html>");
+		serverButton
+				.setText("<html><center><h1>HOST</h1><br><br>(a secure chat room)</center></html>");
 		serverButton.setToolTipText("select this option to host a chat");
 		serverButton.setLocation(10, 10);
 		serverButton.setSize(180, 173);
@@ -143,24 +125,10 @@ public class CryptoChat extends JFrame {
 			public void actionPerformed(ActionEvent event) {
 				if (serverButton.isSelected()) {
 					// show HOSTing options.
-					joinButton.setVisible(false);
-					hostPortLabelOpt.setVisible(true);
-					hostPortFieldOpt.setVisible(true);
-					hostKeyLabelOpt.setVisible(true);
-					hostKeyFieldOpt.setVisible(true);
-					hostPhraseBoxOpt.setVisible(true);
-					hostPhraseFieldOpt.setVisible(true);
-					hostButtonStartOpt.setVisible(true);
+					setHostOptCompsTo(true);
 				} else {
 					// hide HOSTing options.
-					joinButton.setVisible(true);
-					hostPortLabelOpt.setVisible(false);
-					hostPortFieldOpt.setVisible(false);
-					hostKeyLabelOpt.setVisible(false);
-					hostKeyFieldOpt.setVisible(false);
-					hostPhraseBoxOpt.setVisible(false);
-					hostPhraseFieldOpt.setVisible(true);
-					hostButtonStartOpt.setVisible(false);
+					setHostOptCompsTo(false);
 				}
 			}
 		});
@@ -293,10 +261,12 @@ public class CryptoChat extends JFrame {
 		hostButtonStartOpt.setSize(185, 43);
 		hostButtonStartOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				serverButton.setSelected(false);
-				setComponentsToState(startScreenList, false);
+				setStartCompsTo(false);
+				setHostOptCompsTo(false);
+				repaint();
 				setWinSizeTo(hostScreenSize.x, hostScreenSize.y);
-				setComponentsToState(hostScreenList, true);
+				setHostCompsTo(true);
+
 				// TODO add threaded server here.
 				// server = new CryptoServer(port, key);
 			}
@@ -304,22 +274,42 @@ public class CryptoChat extends JFrame {
 
 		// Setting the JOIN button.
 		joinButton = new JToggleButton();
-		joinButton.setText("<html><center><u>JOIN</u><br><br>a secure chat room</center></html>");
-		joinButton.setToolTipText("select this option to host a chat");
+		joinButton
+				.setText("<html><center><h1>JOIN</h1><br><br>(a secure chat room)</center></html>");
+		joinButton.setToolTipText("select this option to join a chat");
 		joinButton.setLocation(203, 10);
 		joinButton.setSize((startScreenSize.x - 40) / 2, startScreenSize.y - 47);
 		joinButton.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0, 0,
 				0, 0)));
 		joinButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				setComponentsToState(startScreenList, false);
+				if (joinButton.isSelected()) {
+					// show HOSTing options.
+					setJoinOptCompsTo(true);
+				} else {
+					// hide HOSTing options.
+					setJoinOptCompsTo(false);
+				}
+			}
+		});
+
+		// Setting the start button.
+		joinButtonStartOpt = new JButton("<html><center><h1>Start!</h1></center></html>");
+		joinButtonStartOpt.setVisible(false);
+		joinButtonStartOpt.setLocation(200, 140);
+		joinButtonStartOpt.setSize(185, 43);
+		joinButtonStartOpt.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				setStartCompsTo(false);
+				setJoinOptCompsTo(false);
+				repaint();
 				setWinSizeTo(joinScreenSize.x, joinScreenSize.y);
-				setComponentsToState(joinScreenList, true);
+				setJoinCompsTo(true);
 				// TODO join server commands here.
 			}
 		});
 
-		// add HOST button and its options.
+		// add the HOST button and its options.
 		add(serverButton);
 		add(hostPortLabelOpt);
 		add(hostPortFieldOpt);
@@ -329,8 +319,10 @@ public class CryptoChat extends JFrame {
 		add(hostPhraseFieldOpt);
 		add(hostButtonStartOpt);
 
-		// add JOIN button and its options.
+		// add the JOIN button and its options.
 		add(joinButton);
+
+		add(joinButtonStartOpt);
 	}
 
 	private void setupHostScreen() {
@@ -401,14 +393,36 @@ public class CryptoChat extends JFrame {
 
 	}
 
-	private void setComponentsToState(LinkedList<Component> list, boolean show) {
-		for (Component curComp : list) {
-			// if (curComp == null) {
-			// System.out.println("need to initilize a component");
-			// return;
-			// }
-			curComp.setVisible(show);
-		}
+	private void setStartCompsTo(boolean state) {
+		serverButton.setVisible(state);
+		joinButton.setVisible(state);
+	}
+
+	private void setHostCompsTo(boolean state) {
+		hostChatLabel.setVisible(state);
+		hostAlignChat.setVisible(state);
+		hostChatTextboxFrame.setVisible(state);
+		hostChatTextbox.setVisible(state);
+		hostInputBox.setVisible(state);
+	}
+
+	private void setHostOptCompsTo(boolean state) {
+		joinButton.setVisible(!state);
+		hostPortLabelOpt.setVisible(state);
+		hostPortFieldOpt.setVisible(state);
+		hostKeyLabelOpt.setVisible(state);
+		hostKeyFieldOpt.setVisible(state);
+		hostPhraseBoxOpt.setVisible(state);
+		hostPhraseFieldOpt.setVisible(state);
+		hostButtonStartOpt.setVisible(state);
+	}
+
+	private void setJoinCompsTo(boolean state) {
+
+	}
+
+	private void setJoinOptCompsTo(boolean state) {
+		serverButton.setVisible(!state);
 	}
 
 	private void setWinSizeTo(int x, int y) {
@@ -444,6 +458,7 @@ public class CryptoChat extends JFrame {
 	//
 	public static void main(String[] args) {
 		gui = new CryptoChat();
+		System.out.println(gui.key);
 		gui.chatHistory.add("dsafsdf");
 		gui.chatHistory.add("dsafsdf");
 		gui.chatHistory.add("dsafsdf");

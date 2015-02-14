@@ -56,7 +56,7 @@ public class CryptoClient extends Thread {
 		String sentence;
 		try {
 			sentence = memberInput.readLine();
-			while (!sentence.equalsIgnoreCase("exit!")) {
+			while (true) {
 				// Send sentence to server
 				if (sentence != null) {
 					sendMessage(sentence);
