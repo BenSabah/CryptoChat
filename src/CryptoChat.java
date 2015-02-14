@@ -6,12 +6,13 @@
  * @author Ben Sabah.
  */
 
-import java.util.LinkedList;
 import java.awt.Font;
-import java.awt.List;
 import java.awt.Point;
 import java.awt.Color;
 import java.awt.Component;
+import java.util.LinkedList;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
@@ -23,8 +24,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JButton;
 import javax.swing.JTextArea;
-import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JScrollPane;
+import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
@@ -35,17 +37,27 @@ public class CryptoChat extends JFrame {
 	LinkedList<Component> startScreenList;
 	LinkedList<Component> hostScreenList;
 	LinkedList<Component> joinScreenList;
+	LinkedList<String> chatHistory = new LinkedList<String>();
 	static JPanel panel = new JPanel();
 	static CryptoChat gui;
-	LinkedList<String> chatHistory = new LinkedList<String>();
 
-	// START-screen settings and components.
-	Point startScreenSize = new Point(400, 150);
-	JButton hostButton;
-	JButton joinButton;
+	// Shared components and settings.
+	private byte[] key;
+	int port;
+
+	// START-screen hosting components.
+	Point startScreenSize = new Point(400, 220);
+	JToggleButton hostButton;
+	JLabel serverPortLabel;
+	JTextField portField;
+	JButton hostButtonStart;
+
+	// START-screen join components.
+	JToggleButton joinButton;
 
 	// HOSTING-screen settings and components.
 	Point hostScreenSize = new Point(700, 500);
+	CryptoServer server;
 	JLabel membersTitle;
 	JScrollPane chatWindowHostFrame;
 	JTextArea chatWindowHost;
@@ -114,29 +126,94 @@ public class CryptoChat extends JFrame {
 
 	private void setupStartScreen() {
 		// Setting the HOST button.
-		hostButton = new JButton();
+		hostButton = new JToggleButton();
 		hostButton.setText("<html><center><u>HOST</u><br><br>a secure chat room</center></html>");
 		hostButton.setToolTipText("select this option to host a chat");
 		hostButton.setLocation(10, 10);
-		hostButton.setSize(180, 100);
+		hostButton.setSize((startScreenSize.x - 40) / 2, startScreenSize.y - 47);
 		hostButton.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0, 0,
 				0, 0)));
 		hostButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
+				if (hostButton.isSelected()) {
+					// show HOSTing options.
+					joinButton.setVisible(false);
+					serverPortLabel.setVisible(true);
+					portField.setVisible(true);
+					hostButtonStart.setVisible(true);
+				} else {
+					// hide HOSTing options.
+					joinButton.setVisible(true);
+					serverPortLabel.setVisible(false);
+					portField.setVisible(false);
+					hostButtonStart.setVisible(false);
+				}
+			}
+		});
+
+		serverPortLabel = new JLabel("Server port:");
+		serverPortLabel.setVisible(false);
+		serverPortLabel.setLocation(202, 10);
+		serverPortLabel.setSize(60, 25);
+
+		portField = new JTextField(port);
+		portField.setLocation(270, 10);
+		portField.setSize(115, 25);
+		portField.setVisible(false);
+		portField.setHorizontalAlignment(JLabel.CENTER);
+		portField.addKeyListener(new KeyListener() {
+			String input;
+
+			private void update() {
+				input = portField.getText();
+				try {
+					port = Integer.parseInt(input);
+					if (port > 65536) {
+						portField.setText("65536");
+						port = 65536;
+					}
+				} catch (Exception e) {
+					if (input.length() > 1) {
+						portField.setText(input.substring(0, input.length() - 1));
+					} else {
+						portField.setText("");
+					}
+				}
+				System.out.println(port);
+			}
+
+			public void keyTyped(KeyEvent e) {
+				update();
+			}
+
+			public void keyReleased(KeyEvent e) {
+				update();
+			}
+
+			public void keyPressed(KeyEvent e) {
+				update();
+			}
+		});
+
+		hostButtonStart = new JButton("<html><center><h1>Start!</h1></center></html>");
+		hostButtonStart.setVisible(false);
+		hostButtonStart.setLocation(200, 140);
+		hostButtonStart.setSize(185, 43);
+		hostButtonStart.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
 				setComponentsToState(startScreenList, false);
-				repaint();
 				setWinSizeTo(hostScreenSize.x, hostScreenSize.y);
 				setComponentsToState(hostScreenList, true);
-				// TODO start server commands here.
+				server = new CryptoServer(port, key);
 			}
 		});
 
 		// Setting the JOIN button.
-		joinButton = new JButton();
+		joinButton = new JToggleButton();
 		joinButton.setText("<html><center><u>JOIN</u><br><br>a secure chat room</center></html>");
 		joinButton.setToolTipText("select this option to host a chat");
 		joinButton.setLocation(203, 10);
-		joinButton.setSize(180, 100);
+		joinButton.setSize((startScreenSize.x - 40) / 2, startScreenSize.y - 47);
 		joinButton.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0, 0,
 				0, 0)));
 		joinButton.addActionListener(new ActionListener() {
@@ -148,7 +225,13 @@ public class CryptoChat extends JFrame {
 			}
 		});
 
+		// add HOST button and its options.
 		add(hostButton);
+		add(hostButtonStart);
+		add(serverPortLabel);
+		add(portField);
+
+		// add JOIN button and its options.
 		add(joinButton);
 	}
 
@@ -164,8 +247,8 @@ public class CryptoChat extends JFrame {
 		alignChatHost.setSize(30, 15);
 		alignChatHost.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0,
 				0, 0, 0)));
-		alignChatHost.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
+		alignChatHost.addKeyListener(new KeyListener() {
+			private void update() {
 				if (ltrAlignment) {
 					ltrAlignment = false;
 					alignChatHost.setText("RTL");
@@ -177,9 +260,20 @@ public class CryptoChat extends JFrame {
 					chatWindowHost.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 					chatWindowHostFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 				}
-				chatWindowHostFrame.repaint();
-				chatWindowHost.repaint();
 			}
+
+			public void keyTyped(KeyEvent e) {
+				update();
+			}
+
+			public void keyReleased(KeyEvent e) {
+				update();
+			}
+
+			public void keyPressed(KeyEvent e) {
+				update();
+			}
+
 		});
 
 		// Setup the chat history window.
@@ -188,7 +282,7 @@ public class CryptoChat extends JFrame {
 		chatWindowHost.setEditable(false);
 		chatWindowHostFrame = new JScrollPane(chatWindowHost);
 		chatWindowHostFrame.setLocation(10, 25);
-		chatWindowHostFrame.setSize(400, hostScreenSize.y - 145);
+		chatWindowHostFrame.setSize(400, 355);
 		chatWindowHost.setFont(new Font(chatWindowHost.getFont().getFontName(), chatWindowHost
 				.getFont().getStyle(), 12));
 
@@ -196,9 +290,6 @@ public class CryptoChat extends JFrame {
 		userInput = new JTextField();
 		userInput.setLocation(10, hostScreenSize.y - 110);
 		userInput.setSize(400, 25);
-		// userInput.setFont(new Font(userInput.getFont().getFontName(),
-		// userInput.getFont()
-		// .getStyle(), 12));
 
 		add(chatWindowHostFrame);
 		add(alignChatHost);
@@ -243,8 +334,6 @@ public class CryptoChat extends JFrame {
 
 			this.setLocation((GuiUtils.getScreenWidth() - this.getWidth()) / 2,
 					(GuiUtils.getsScreenHeight() - this.getHeight()) / 2);
-			repaint(1);
-			;
 		}
 
 	}
@@ -259,5 +348,10 @@ public class CryptoChat extends JFrame {
 	//
 	public static void main(String[] args) {
 		gui = new CryptoChat();
+		gui.chatHistory.add("dsafsdf");
+		gui.chatHistory.add("dsafsdf");
+		gui.chatHistory.add("dsafsdf");
+		gui.chatHistory.add("dsafsdf");
+		gui.chatHistory.add("dsafsdf");
 	}
 }
