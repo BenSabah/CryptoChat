@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 public class CryptoServer {
 
-	private static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
+	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
 	static ArrayList<CryptoClient> usersList;
 	private static ServerSocket serverSocket;
 	private static byte[] key;
@@ -157,5 +157,4 @@ public class CryptoServer {
 			}
 		}
 	}
-
 }
