@@ -6,6 +6,8 @@
  * @author Ben Sabah.
  */
 
+import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
 import java.awt.Color;
@@ -125,7 +127,8 @@ public class CryptoChat extends JFrame {
 				.setText("<html><center><h1>HOST</h1><br><br>(a secure chat room)</center></html>");
 		serverButton.setToolTipText("select this option to host a chat");
 		serverButton.setLocation(10, 10);
-		serverButton.setSize(180, 173);
+		serverButton.setSize(185, 173);
+		serverButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		serverButton.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0,
 				0, 0, 0)));
 		serverButton.addActionListener(new ActionListener() {
@@ -147,25 +150,32 @@ public class CryptoChat extends JFrame {
 		hostPortLabelOpt.setSize(60, 25);
 
 		// Setting the port field.
-		hostPortFieldOpt = new JTextField(port + "");
+		hostPortFieldOpt = new JTextField(CryptoServer.port + "");
 		hostPortFieldOpt.setLocation(270, 10);
 		hostPortFieldOpt.setSize(115, 25);
 		hostPortFieldOpt.setVisible(false);
 		hostPortFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		hostPortFieldOpt.addKeyListener(new KeyListener() {
 			String input;
+			int i = 0;
 
 			private void update() {
 				input = hostPortFieldOpt.getText();
 				try {
-					port = Integer.parseInt(input);
-					if (port > 65536) {
-						hostPortFieldOpt.setText("65536");
-						port = 65536;
+					// Fool-proofing the port input.
+					CryptoServer.port = Integer.parseInt(input);
+					if (CryptoServer.port > 65535) {
+						hostPortFieldOpt.setText("65535");
+						CryptoServer.port = 65535;
 					}
 				} catch (Exception e) {
 					if (input.length() > 1) {
-						hostPortFieldOpt.setText(input.substring(0, input.length() - 1));
+						for (; i < input.length(); i++) {
+							if (input.charAt(i) < '0' || input.charAt(i) > '9') {
+								break;
+							}
+						}
+						hostPortFieldOpt.setText(input.substring(0, i));
 					} else {
 						hostPortFieldOpt.setText("");
 					}
@@ -206,6 +216,7 @@ public class CryptoChat extends JFrame {
 					hostKeyFieldOpt.setText(input);
 				}
 				Feistel.key = input.getBytes();
+				System.out.println(Feistel.key + " = " + new String(Feistel.key));
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -263,20 +274,22 @@ public class CryptoChat extends JFrame {
 		});
 
 		// Setting the start button.
-		hostButtonStartOpt = new JButton("<html><center><h1>Start!</h1></center></html>");
-		hostButtonStartOpt.setVisible(false);
-		hostButtonStartOpt.setLocation(200, 140);
-		hostButtonStartOpt.setSize(185, 43);
-		hostButtonStartOpt.addActionListener(new ActionListener() {
+		hostStartButtonOpt = new JButton("<html><center><h1>Start!</h1></center></html>");
+		hostStartButtonOpt.setVisible(false);
+		hostStartButtonOpt.setLocation(200, 140);
+		hostStartButtonOpt.setSize(185, 43);
+		hostStartButtonOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		hostStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				setStartCompsTo(false);
 				setHostOptCompsTo(false);
+				setStartCompsTo(false);
 				repaint();
-				setWinSizeTo(hostScreenSize.x, hostScreenSize.y);
+				setWinSizeTo(hostScreenSize);
 				setHostCompsTo(true);
 
 				// TODO add threaded server here.
-				// server = new CryptoServer(port, key);
+				hostServer = new CryptoServer();
+				hostServer.start();
 			}
 		});
 
@@ -401,52 +414,75 @@ public class CryptoChat extends JFrame {
 
 	private void setupJoinScreen() {
 
+		// Add all the JOIN-window components to the window.
 	}
 
 	private void setStartCompsTo(boolean state) {
-		serverButton.setVisible(state);
-		joinButton.setVisible(state);
-	}
-
-	private void setHostCompsTo(boolean state) {
-		hostChatLabel.setVisible(state);
-		hostAlignChat.setVisible(state);
-		hostChatTextboxFrame.setVisible(state);
-		hostChatTextbox.setVisible(state);
-		hostInputBox.setVisible(state);
+		try {
+			serverButton.setVisible(state);
+			joinButton.setVisible(state);
+		} catch (Exception e) {
+			System.out.println("A - " + e.getClass());
+		}
 	}
 
 	private void setHostOptCompsTo(boolean state) {
-		joinButton.setVisible(!state);
-		hostPortLabelOpt.setVisible(state);
-		hostPortFieldOpt.setVisible(state);
-		hostKeyLabelOpt.setVisible(state);
-		hostKeyFieldOpt.setVisible(state);
-		hostPhraseBoxOpt.setVisible(state);
-		hostPhraseFieldOpt.setVisible(state);
-		hostButtonStartOpt.setVisible(state);
-	}
-
-	private void setJoinCompsTo(boolean state) {
-
+		try {
+			joinButton.setVisible(!state);
+			hostPortLabelOpt.setVisible(state);
+			hostPortFieldOpt.setVisible(state);
+			hostKeyLabelOpt.setVisible(state);
+			hostKeyFieldOpt.setVisible(state);
+			hostPhraseBoxOpt.setVisible(state);
+			hostPhraseFieldOpt.setVisible(state);
+			hostStartButtonOpt.setVisible(state);
+		} catch (Exception e) {
+			System.out.println("B - " + e.getClass());
+		}
 	}
 
 	private void setJoinOptCompsTo(boolean state) {
-		serverButton.setVisible(!state);
+		try {
+			serverButton.setVisible(!state);
+			joinStartButtonOpt.setVisible(state);
+		} catch (Exception e) {
+			System.out.println("C - " + e.getClass());
+		}
 	}
 
-	private void setWinSizeTo(int x, int y) {
-		if (GuiUtils.getScreenWidth() <= x || GuiUtils.getsScreenHeight() <= y) {
+	private void setHostCompsTo(boolean state) {
+		try {
+			hostChatLabel.setVisible(state);
+			hostAlignChat.setVisible(state);
+			hostChatTextboxFrame.setVisible(state);
+			hostChatTextbox.setVisible(state);
+			hostInputBox.setVisible(state);
+		} catch (Exception e) {
+			System.out.println("D - " + e.getClass());
+		}
+	}
+
+	private void setJoinCompsTo(boolean state) {
+		try {
+			joinStartButtonOpt.setVisible(state);
+		} catch (Exception e) {
+			System.out.println("E - " + e.getClass());
+		}
+
+	}
+
+	private void setWinSizeTo(Dimension dim) {
+		if (GuiUtils.getScreenWidth() <= dim.width || GuiUtils.getsScreenHeight() <= dim.height) {
 			return;
 		}
 
-		while (getWidth() != x && getHeight() != y) {
-			if (x > getWidth()) {
+		while (getWidth() != dim.width || getHeight() != dim.height) {
+			if (dim.width > getWidth()) {
 				setSize(getWidth() + 1, getHeight());
 			} else {
 				setSize(getWidth() - 1, getHeight());
 			}
-			if (y > getHeight()) {
+			if (dim.height > getHeight()) {
 				setSize(getWidth(), getHeight() + 1);
 			} else {
 				setSize(getWidth(), getHeight() - 1);
