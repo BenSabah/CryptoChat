@@ -44,8 +44,6 @@ public class CryptoChat extends JFrame {
 	static CryptoChat gui;
 
 	// Shared components and settings.
-	private byte[] key;
-	int port = 9229;
 
 	// START-screen hosting components.
 	JToggleButton serverButton;
@@ -54,26 +52,35 @@ public class CryptoChat extends JFrame {
 	JLabel hostKeyLabelOpt;
 	JTextField hostKeyFieldOpt;
 	JCheckBox hostPhraseBoxOpt;
-	JButton hostButtonStartOpt;
+	JTextField hostPhraseFieldOpt;
+	JButton hostStartButtonOpt;
 
 	// START-screen join components.
 	JToggleButton joinButton;
-	JButton joinButtonStartOpt;
+	JLabel joinIPLabelOpt;
+	JTextField joinIPFieldOpt;
+	JLabel joinPortLabelOpt;
+	JTextField joinPortFieldOpt;
+	JButton joinStartButtonOpt;
 
 	// HOSTING-screen settings and components.
-	Point hostScreenSize = new Point(700, 450);
+	Dimension hostScreenSize = new Dimension(700, 450);
 	CryptoServer hostServer;
 	JLabel hostChatLabel;
-	JScrollPane hostChatTextboxFrame;
-	JTextArea hostChatTextbox;
 	JButton hostAlignChat;
 	boolean hostChatLTRAlignment = true;
+	JScrollPane hostChatTextboxFrame;
+	JTextArea hostChatTextbox;
 	JTextField hostInputBox;
 
 	// JOIN-screen settings and components.
-	Point joinScreenSize = new Point(500, 500);
-	JButton alignChatJoin;
-	JTextField hostPhraseFieldOpt;
+	Dimension joinScreenSize = new Dimension(500, 500);
+	JLabel joinChatLabel;
+	JButton joinAlignChat;
+	boolean joinChatLTRAlignment = true;
+	JScrollPane joinChatTextboxFrame;
+	JTextArea joinChatTextbox;
+	JTextField joinInputBox;
 
 	public CryptoChat() {
 		// Setup main screen style, location and behavior.
@@ -198,7 +205,7 @@ public class CryptoChat extends JFrame {
 					input = input.substring(0, 8);
 					hostKeyFieldOpt.setText(input);
 				}
-				key = input.getBytes();
+				Feistel.key = input.getBytes();
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -218,6 +225,7 @@ public class CryptoChat extends JFrame {
 		hostPhraseBoxOpt.setToolTipText("change the session phrase for extra security");
 		hostPhraseBoxOpt.setLocation(198, 90);
 		hostPhraseBoxOpt.setSize(180, 17);
+		hostPhraseBoxOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		hostPhraseBoxOpt.setVisible(false);
 		hostPhraseBoxOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -278,7 +286,8 @@ public class CryptoChat extends JFrame {
 				.setText("<html><center><h1>JOIN</h1><br><br>(a secure chat room)</center></html>");
 		joinButton.setToolTipText("select this option to join a chat");
 		joinButton.setLocation(203, 10);
-		joinButton.setSize((startScreenSize.x - 40) / 2, startScreenSize.y - 47);
+		joinButton.setSize(180, 173);
+		joinButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		joinButton.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0, 0,
 				0, 0)));
 		joinButton.addActionListener(new ActionListener() {
@@ -294,22 +303,23 @@ public class CryptoChat extends JFrame {
 		});
 
 		// Setting the start button.
-		joinButtonStartOpt = new JButton("<html><center><h1>Start!</h1></center></html>");
-		joinButtonStartOpt.setVisible(false);
-		joinButtonStartOpt.setLocation(200, 140);
-		joinButtonStartOpt.setSize(185, 43);
-		joinButtonStartOpt.addActionListener(new ActionListener() {
+		joinStartButtonOpt = new JButton("<html><center><h1>Join!</h1></center></html>");
+		// joinStartButtonOpt.setVisible(false);
+		joinStartButtonOpt.setLocation(10, 140);
+		joinStartButtonOpt.setSize(185, 43);
+		joinStartButtonOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		joinStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				setStartCompsTo(false);
 				setJoinOptCompsTo(false);
+				setStartCompsTo(false);
 				repaint();
-				setWinSizeTo(joinScreenSize.x, joinScreenSize.y);
+				setWinSizeTo(joinScreenSize);
 				setJoinCompsTo(true);
 				// TODO join server commands here.
 			}
 		});
 
-		// add the HOST button and its options.
+		// add the HOST and its option components to the window.
 		add(serverButton);
 		add(hostPortLabelOpt);
 		add(hostPortFieldOpt);
@@ -317,12 +327,12 @@ public class CryptoChat extends JFrame {
 		add(hostKeyFieldOpt);
 		add(hostPhraseBoxOpt);
 		add(hostPhraseFieldOpt);
-		add(hostButtonStartOpt);
+		add(hostStartButtonOpt);
 
-		// add the JOIN button and its options.
+		// add the JOIN and its option components to the window.
 		add(joinButton);
 
-		add(joinButtonStartOpt);
+		add(joinStartButtonOpt);
 	}
 
 	private void setupHostScreen() {
@@ -335,8 +345,8 @@ public class CryptoChat extends JFrame {
 		hostAlignChat = new JButton("LTR");
 		hostAlignChat.setLocation(380, 6);
 		hostAlignChat.setSize(30, 15);
-		hostAlignChat.setBorder(new CompoundBorder(new LineBorder(Color.BLACK), new EmptyBorder(0,
-				0, 0, 0)));
+		hostAlignChat.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		hostAlignChat.setBorder(new CompoundBorder(null, new EmptyBorder(0, 0, 0, 0)));
 		hostAlignChat.addKeyListener(new KeyListener() {
 			private void update() {
 				if (hostChatLTRAlignment) {
@@ -365,7 +375,6 @@ public class CryptoChat extends JFrame {
 			public void keyPressed(KeyEvent e) {
 				update();
 			}
-
 		});
 
 		// Setup the chat history window.
@@ -383,6 +392,7 @@ public class CryptoChat extends JFrame {
 		hostInputBox.setLocation(10, 390);
 		hostInputBox.setSize(400, 25);
 
+		// Add all the HOST-window components to the window.
 		add(hostChatTextboxFrame);
 		add(hostAlignChat);
 		add(hostChatLabel);
@@ -445,7 +455,6 @@ public class CryptoChat extends JFrame {
 			this.setLocation((GuiUtils.getScreenWidth() - this.getWidth()) / 2,
 					(GuiUtils.getsScreenHeight() - this.getHeight()) / 2);
 		}
-
 	}
 
 	//
