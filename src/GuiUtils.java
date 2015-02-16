@@ -62,28 +62,13 @@ class GuiUtils {
 		static final int ERROR = 2;
 		static final int QUESTION = 3;
 
-		private static void rawMsg(String msg, String title, int type) {
+		public static void rawMsg(String msg, String title, int type) {
 			java.awt.Toolkit.getDefaultToolkit().beep();
 			JOptionPane.showMessageDialog(null, msg, title, type);
 		}
 
 		static void errorMsg(String msg) {
 			rawMsg(msg, "Error !", ERROR);
-		}
-
-		static void encMsg(boolean isSuccessful) {
-			String msg = (isSuccessful) ? "Encrypted successfully." : "Encryption failed.";
-			rawMsg(msg, "Encryption:", (isSuccessful) ? SUCCESS : FAIL);
-		}
-
-		static void decMsg(boolean isSuccessful) {
-			String msg = (isSuccessful) ? "Decrypted successfully." : "Decryption failed.";
-			rawMsg(msg, "Decryption:", (isSuccessful) ? SUCCESS : FAIL);
-		}
-
-		static void verifyMsg(boolean isSuccessful) {
-			String msg = (isSuccessful) ? "Verification Passed." : "Verification failed.";
-			rawMsg(msg, "Verification:", (isSuccessful) ? SUCCESS : FAIL);
 		}
 	}
 
