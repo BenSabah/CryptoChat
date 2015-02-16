@@ -5,14 +5,15 @@
  * 
  * @author Ben Sabah.
  */
+import java.io.IOException;
+import java.util.LinkedList;
 
-import java.awt.Cursor;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Component;
-import java.util.LinkedList;
+import java.awt.Dimension;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.ActionEvent;
@@ -216,7 +217,6 @@ public class CryptoChat extends JFrame {
 					hostKeyFieldOpt.setText(input);
 				}
 				Feistel.key = input.getBytes();
-				System.out.println(Feistel.key + " = " + new String(Feistel.key));
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -281,15 +281,20 @@ public class CryptoChat extends JFrame {
 		hostStartButtonOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		hostStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				setHostOptCompsTo(false);
-				setStartCompsTo(false);
-				repaint();
-				setWinSizeTo(hostScreenSize);
-				setHostCompsTo(true);
+				try {
+					hostServer = new CryptoServer();
+					hostServer.start();
+					setHostOptCompsTo(false);
+					setStartCompsTo(false);
+					repaint();
+					setWinSizeTo(hostScreenSize);
+					setHostCompsTo(true);
+				} catch (IOException e) {
+					GuiUtils.PopUpMessages.errorMsg("port " + CryptoServer.port
+							+ " is already used!\nplease try using another port number.");
+					hostPortFieldOpt.setText("");
 
-				// TODO add threaded server here.
-				hostServer = new CryptoServer();
-				hostServer.start();
+				}
 			}
 		});
 
@@ -501,13 +506,13 @@ public class CryptoChat extends JFrame {
 	//
 	//
 	//
+
 	public static void main(String[] args) {
 		gui = new CryptoChat();
-		System.out.println(gui.key);
-		gui.chatHistory.add("dsafsdf");
-		gui.chatHistory.add("dsafsdf");
-		gui.chatHistory.add("dsafsdf");
-		gui.chatHistory.add("dsafsdf");
-		gui.chatHistory.add("dsafsdf");
+		gui.chatHistory.add("TelAviv");
+		gui.chatHistory.add("Jerusalem");
+		gui.chatHistory.add("Pari");
+		gui.chatHistory.add("OldYork");
+		gui.chatHistory.add("Dusseldorf");
 	}
 }
