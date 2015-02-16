@@ -6,30 +6,18 @@
  * @author Ben Sabah.
  */
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 
-public class CryptoServer {
+public class CryptoServer extends Thread {
 
 	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
 	static ArrayList<CryptoClient> usersList;
+	static ArrayList<String> bannedUserList;
 	private static ServerSocket serverSocket;
-	private static byte[] key;
-
-	/**
-	 * This constructor starts the CryptoChat-Server, with the default
-	 * initialization phrase.
-	 * 
-	 * @param portNumber
-	 *            The port that the server will use.
-	 * @param key
-	 *            The Key to use in the CryptoChat server.
-	 */
-
-	public CryptoServer(int portNumber, byte[] key) {
-		this(portNumber, key, sessionPhrase);
-	}
+	static int port = 9229;
 
 	/**
 	 * This constructor starts the CryptoChat-Server, with a specified
@@ -43,26 +31,15 @@ public class CryptoServer {
 	 *            Set this to a different (non-default) initialization phrase
 	 *            for added security.
 	 */
-	public CryptoServer(int portNumber, byte[] key, byte[] initPhrase) {
-		sessionPhrase = initPhrase;
+	public CryptoServer() {
 		usersList = new ArrayList<CryptoClient>();
+		bannedUserList = new ArrayList<String>();
+
 		try {
-			serverSocket = new ServerSocket(portNumber);
-
-			// Handle a client login
-			while (true) {
-				Socket newMemberSocket = serverSocket.accept();
-				addChatMember(newMemberSocket);
-			}
+			serverSocket = new ServerSocket(port);
 		} catch (IOException e) {
-			System.out.println("Could not create a new server socket.");
-		} finally {
-			try {
-				serverSocket.close();
-			} catch (IOException e) {
-			}
+			System.out.println("that port is in use!");
 		}
-
 	}
 
 	/**
@@ -71,7 +48,7 @@ public class CryptoServer {
 	 * @param newMemberSocket
 	 *            The client that we want to add to the server.
 	 */
-	private static boolean addChatMember(Socket newMemberSocket) {
+	static boolean addChatMember(Socket newMemberSocket) {
 		// TODO check for number of connections from the given IP here.
 
 		try {
@@ -79,17 +56,18 @@ public class CryptoServer {
 			synchronized (usersList) {
 				newClient.start();
 
-				boolean isValidSessionPhrase = checkTheInitPhrase(newClient.getMemberInput()
-						.readLine().getBytes());
+				String userSessionPhrase = newClient.getMemberInput().readLine();
+				boolean isValidSessionPhrase = checkTheInitPhrase(userSessionPhrase.getBytes());
 				if (!isValidSessionPhrase) {
 					// TODO update the number of tries for this IP here.
 					System.out.println("illegal key");
+					newClient.sendMessage("illegal key");
 					newMemberSocket.close();
 					return false;
 				}
 
 				// Greet this current added client.
-				newClient.getMemberOutput().println("Welcome to the Crypto Server! There are ");
+				newClient.getMemberOutput().print("Welcome to the Crypto Server! There are ");
 				newClient.getMemberOutput().println(usersList.size() + " users connected.");
 
 				// Inform all chat members that this current client joined.
@@ -113,9 +91,9 @@ public class CryptoServer {
 	 *            The phrase we want to compare to our encrypted phrase.
 	 * @return True if the given phrase is the same as ours, False otherwise.
 	 */
-	private static boolean checkTheInitPhrase(byte[] phraseToCheck) {
+	static boolean checkTheInitPhrase(byte[] phraseToCheck) {
 		// Encrypt our session phrase,
-		byte[] encryptInitPhrase = Feistel.encrypt(sessionPhrase, key);
+		byte[] encryptInitPhrase = Feistel.encrypt(sessionPhrase, Feistel.key);
 
 		// Check for different sizes first.
 		if (encryptInitPhrase.length != sessionPhrase.length) {
@@ -123,7 +101,7 @@ public class CryptoServer {
 		}
 
 		// Check each byte. return false if encounter a difference.
-		for (int i = 0; i < key.length; i++) {
+		for (int i = 0; i < phraseToCheck.length; i++) {
 			if (encryptInitPhrase[i] != phraseToCheck[i]) {
 				return false;
 			}
@@ -157,4 +135,24 @@ public class CryptoServer {
 			}
 		}
 	}
+
+	public void run() {
+		try {
+			// Handle a client login
+			while (true) {
+				Socket newMemberSocket = serverSocket.accept();
+				addChatMember(newMemberSocket);
+			}
+		} catch (IOException e) {
+			System.out.println("Could not create the new connections");
+		} catch (NullPointerException e) {
+			System.out.println("the server never started!");
+		} finally {
+			try {
+				serverSocket.close();
+			} catch (Exception e) {
+			}
+		}
+	}
+
 }
