@@ -5,20 +5,16 @@
  * 
  * @author Ben Sabah.
  */
-
-import java.io.IOException;
-import java.io.PrintStream;
-
 import java.net.Socket;
 import java.net.ServerSocket;
-
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 public class CryptoServer extends Thread {
 
 	private static ServerSocket serverSocket;
 	static int port = 9229;
-	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
 	static ArrayList<CryptoClient> usersList;
 	static ArrayList<String> bannedUsersList;
 	static ArrayList<String> probationUsersList;
@@ -178,10 +174,10 @@ public class CryptoServer extends Thread {
 	 */
 	private boolean checkTheSessionPhrase(byte[] phraseToCheck) {
 		// Encrypt our session phrase,
-		byte[] encryptInitPhrase = Feistel.encrypt(sessionPhrase, Feistel.key);
+		byte[] encryptInitPhrase = Feistel.encrypt(Feistel.sessionPhrase, Feistel.key);
 
 		// Check for different sizes first.
-		if (encryptInitPhrase.length != sessionPhrase.length) {
+		if (encryptInitPhrase.length != Feistel.sessionPhrase.length) {
 			return false;
 		}
 

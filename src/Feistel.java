@@ -15,6 +15,7 @@ import java.io.RandomAccessFile;
 public class Feistel {
 
 	private static final int KEY_SIZE = 56;
+	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
 
 	/**
 	 * This table specifies the input permutation of a 64-bit block. it
