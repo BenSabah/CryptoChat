@@ -7,80 +7,165 @@
  */
 
 import java.io.IOException;
+import java.io.PrintStream;
+
 import java.net.Socket;
 import java.net.ServerSocket;
+
 import java.util.ArrayList;
 
 public class CryptoServer extends Thread {
 
-	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
-	static ArrayList<CryptoClient> usersList;
-	static ArrayList<String> bannedUserList;
 	private static ServerSocket serverSocket;
 	static int port = 9229;
+	static byte[] sessionPhrase = "This is the initial CryptoChat phrase".getBytes();
+	static ArrayList<CryptoClient> usersList;
+	static ArrayList<String> bannedUsersList;
+	static ArrayList<String> probationUsersList;
+	private static int tries = 3;
 
 	/**
-	 * This constructor starts the CryptoChat-Server, with a specified
-	 * initialization phrase.
-	 * 
-	 * @param portNumber
-	 *            The port that the server will use.
-	 * @param key
-	 *            The Key to use in the CryptoChat server.
-	 * @param initPhrase
-	 *            Set this to a different (non-default) initialization phrase
-	 *            for added security.
+	 * This constructor starts the CryptoChat-Server, using the specified port &
+	 * session-phrase.
 	 */
-	public CryptoServer() {
+	public CryptoServer() throws IOException {
+		serverSocket = new ServerSocket(port);
 		usersList = new ArrayList<CryptoClient>();
-		bannedUserList = new ArrayList<String>();
-
-		try {
-			serverSocket = new ServerSocket(port);
-		} catch (IOException e) {
-			System.out.println("that port is in use!");
-		}
+		bannedUsersList = new ArrayList<String>();
+		probationUsersList = new ArrayList<String>();
 	}
 
 	/**
 	 * Adds a chat member to the server.
 	 * 
-	 * @param newMemberSocket
+	 * @param socketMember
 	 *            The client that we want to add to the server.
 	 */
-	static boolean addChatMember(Socket newMemberSocket) {
-		// TODO check for number of connections from the given IP here.
+	private void addChatMember(Socket socketMember) {
+		String ip = socketMember.getLocalAddress().getHostAddress();
+		PrintStream clientStream = null;
 
 		try {
-			CryptoClient newClient = new CryptoClient(newMemberSocket);
-			synchronized (usersList) {
-				newClient.start();
+			clientStream = new PrintStream(socketMember.getOutputStream());
+			// Check if the user is banned.
+			if (checkIfBanned(ip)) {
+				clientStream.print("you are banned!");
+				clientStream.flush();
+				clientStream.close();
+				closeConnection(socketMember, clientStream);
+				return;
+			}
 
-				String userSessionPhrase = newClient.getMemberInput().readLine();
-				boolean isValidSessionPhrase = checkTheInitPhrase(userSessionPhrase.getBytes());
-				if (!isValidSessionPhrase) {
-					// TODO update the number of tries for this IP here.
-					System.out.println("illegal key");
-					newClient.sendMessage("illegal key");
-					newMemberSocket.close();
-					return false;
+			CryptoClient cryptoClient = new CryptoClient(socketMember);
+			String userSessionPhrase = cryptoClient.getMemberInput().readLine();
+			boolean isValidSessionPhrase = checkTheSessionPhrase(userSessionPhrase.getBytes());
+
+			if (!isValidSessionPhrase) {
+				// add to Probation, check # of tries and kick if necessary.
+				addToProbation(ip);
+				if (appearancesInProbation(ip) >= tries) {
+					removeFromProbation(ip);
+					addToBanned(ip);
+					closeConnection(socketMember, clientStream);
+					return;
 				}
 
-				// Greet this current added client.
-				newClient.getMemberOutput().print("Welcome to the Crypto Server! There are ");
-				newClient.getMemberOutput().println(usersList.size() + " users connected.");
+				// TODO report to HOST that kicked tried to connect.
+				clientStream.print("you've been kicked! you have "
+						+ (tries - appearancesInProbation(ip)) + " more tries.");
 
-				// Inform all chat members that this current client joined.
-				messageAllMembers(newClient.getIp() + " joined" + System.lineSeparator());
-				usersList.add(newClient);
+				// Kinda lame way to jump to the finally part.
+				throw new Exception();
 			}
-		} catch (IOException e1) {
+			// If successful remove from probation.
+			removeFromProbation(ip);
+
+			// Start the connection.
+			cryptoClient.start();
+
+			// TODO Greet this current added client. IN CRYPTO !!!.
+			// "Welcome to the Crypto Server! There are " + usersList.size()
+			// + " users connected."
+
+			// Inform all chat members that the new client joined IN CRYPTO !!!.
+			messageAllMembers(cryptoClient.getIp() + " joined" + System.lineSeparator());
+			usersList.add(cryptoClient);
+		} catch (Exception e) {
+		} finally {
 			try {
-				newMemberSocket.close();
-			} catch (IOException e2) {
+				closeConnection(socketMember, clientStream);
+			} catch (Exception e) {
 			}
 		}
-		return true;
+	}
+
+	private void closeConnection(Socket socketMember, PrintStream stream) {
+		try {
+			stream.close();
+			socketMember.close();
+		} catch (Exception e) {
+		}
+
+	}
+
+	boolean addToProbation(String ip) {
+		return probationUsersList.add(ip);
+	}
+
+	boolean addToBanned(String ip) {
+		return bannedUsersList.add(ip);
+	}
+
+	void removeFromProbation(String ip) {
+		for (int i = 0; i < probationUsersList.size(); i++) {
+			if (probationUsersList.get(i).equals(ip)) {
+				probationUsersList.remove(i);
+				i = -1; // Restart the check from the start.
+			}
+		}
+	}
+
+	void removeFromBannedList(String ip) {
+		for (int i = 0; i < bannedUsersList.size(); i++) {
+			if (bannedUsersList.get(i).equals(ip)) {
+				bannedUsersList.remove(i);
+				i = -1; // Restart the check from the start.
+			}
+		}
+	}
+
+	int appearancesInProbation(String ip) {
+		if (probationUsersList.isEmpty()) {
+			return 0;
+		}
+		int appearances = 0;
+		for (String s : probationUsersList) {
+			if (s.equals(ip)) {
+				appearances++;
+			}
+		}
+		return appearances;
+	}
+
+	int appearancesInBanned(String ip) {
+		if (bannedUsersList.isEmpty()) {
+			return 0;
+		}
+		int appearances = 0;
+		for (String s : bannedUsersList) {
+			if (s.equals(ip)) {
+				appearances++;
+			}
+		}
+		return appearances;
+	}
+
+	boolean checkIfBanned(String ip) {
+		return appearancesInBanned(ip) > 0;
+	}
+
+	boolean checkIfProbation(String ip) {
+		return appearancesInProbation(ip) > 0;
 	}
 
 	/**
@@ -91,7 +176,7 @@ public class CryptoServer extends Thread {
 	 *            The phrase we want to compare to our encrypted phrase.
 	 * @return True if the given phrase is the same as ours, False otherwise.
 	 */
-	static boolean checkTheInitPhrase(byte[] phraseToCheck) {
+	private boolean checkTheSessionPhrase(byte[] phraseToCheck) {
 		// Encrypt our session phrase,
 		byte[] encryptInitPhrase = Feistel.encrypt(sessionPhrase, Feistel.key);
 
@@ -132,6 +217,7 @@ public class CryptoServer extends Thread {
 		synchronized (usersList) {
 			for (CryptoClient user : usersList) {
 				user.getMemberOutput().print(message);
+				user.getMemberOutput().flush();
 			}
 		}
 	}
@@ -154,5 +240,4 @@ public class CryptoServer extends Thread {
 			}
 		}
 	}
-
 }
