@@ -47,8 +47,16 @@ public class CryptoClient extends Thread {
 	 * 
 	 * @param message
 	 */
-	public void sendMessage(String message) {
+	public void sendMessageToRoom(String message) {
 		CryptoServer.messageAllMembers(ip + ": " + message + System.lineSeparator());
+	}
+
+	public void sendMsg(String msg) {
+		try {
+			getMemberOutput().write(msg.getBytes());
+			getMemberOutput().flush();
+		} catch (IOException e) {
+		}
 	}
 
 	@Override
@@ -59,7 +67,7 @@ public class CryptoClient extends Thread {
 			while (true) {
 				// Send sentence to server
 				if (sentence != null) {
-					sendMessage(sentence);
+					sendMessageToRoom(sentence);
 				}
 				sentence = memberInput.readLine();
 			}
