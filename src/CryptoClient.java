@@ -14,68 +14,43 @@ import java.io.InputStreamReader;
 
 public class CryptoClient extends Thread {
 
+	static int port;
 	private String ip;
-	private Socket memberSocket;
-	private PrintStream outToMember;
-	private BufferedReader memberInput;
+	private Socket socket;
+	private PrintStream streamOutput;
+	private BufferedReader streamInput;
 
-	public CryptoClient(Socket memberSocket) throws IOException {
-		ip = memberSocket.getInetAddress().getHostAddress();
-		this.memberSocket = memberSocket;
-		memberInput = new BufferedReader(new InputStreamReader(memberSocket.getInputStream()));
-		outToMember = new PrintStream(memberSocket.getOutputStream());
+	public CryptoClient(Socket socket) throws IOException {
+		this.socket = socket;
+		ip = socket.getInetAddress().getHostAddress();
+		streamOutput = new PrintStream(socket.getOutputStream());
+		streamInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 
 	public String getIp() {
 		return ip;
 	}
 
-	public Socket getMemberSocket() {
-		return memberSocket;
+	public Socket getSocket() {
+		return socket;
 	}
 
-	public BufferedReader getMemberInput() {
-		return memberInput;
+	public String readMessage() throws IOException {
+		return streamInput.readLine();
 	}
 
-	public PrintStream getMemberOutput() {
-		return outToMember;
+	public void sendMessage(String msg) throws IOException {
+		streamOutput.write(msg.getBytes());
+		streamOutput.flush();
 	}
 
-	/**
-	 * Sends the massage to the chat member.
-	 * 
-	 * @param message
-	 */
-	public void sendMessageToRoom(String message) {
-		CryptoServer.messageAllMembers(ip + ": " + message + System.lineSeparator());
-	}
-
-	public void sendMsg(String msg) {
-		try {
-			getMemberOutput().write(msg.getBytes());
-			getMemberOutput().flush();
-		} catch (IOException e) {
-		}
-	}
-
-	@Override
 	public void run() {
-		String sentence;
 		try {
-			sentence = memberInput.readLine();
-			while (true) {
-				// Send sentence to server
-				if (sentence != null) {
-					sendMessageToRoom(sentence);
-				}
-				sentence = memberInput.readLine();
-			}
+			
 		} catch (Exception e) {
 		} finally {
 			try {
-				memberSocket.close();
-				CryptoServer.removeChatMember(this);
+				socket.close();
 			} catch (IOException e) {
 			}
 		}

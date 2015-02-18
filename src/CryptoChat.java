@@ -17,9 +17,10 @@ import java.awt.event.ComponentEvent;
 import java.awt.ComponentOrientation;
 import java.awt.event.ComponentAdapter;
 
-import javax.swing.JFrame;
+import javax.swing.JList;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JFrame;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JTextArea;
@@ -73,6 +74,7 @@ public class CryptoChat extends JFrame {
 	JScrollPane hostChatTextboxFrame;
 	JTextArea hostChatTextbox;
 	JTextField hostChatInputBox;
+	static JList<String> hostUsersList;
 
 	// JOIN-screen settings and components.
 	Dimension joinScreenSize = new Dimension(426, 452);
@@ -150,7 +152,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the HOST port label.
 		hostPortLabelOpt = new JLabel("Server port:");
-		hostPortLabelOpt.setVisible(false);
 		hostPortLabelOpt.setLocation(202, 10);
 		hostPortLabelOpt.setSize(60, 25);
 
@@ -158,7 +159,6 @@ public class CryptoChat extends JFrame {
 		hostPortFieldOpt = new JTextField(CryptoServer.port + "");
 		hostPortFieldOpt.setLocation(270, 10);
 		hostPortFieldOpt.setSize(115, 25);
-		hostPortFieldOpt.setVisible(false);
 		hostPortFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		hostPortFieldOpt.addKeyListener(new KeyListener() {
 			String input;
@@ -202,7 +202,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the HOST key label.
 		hostKeyLabelOpt = new JLabel("8-letter key:");
-		hostKeyLabelOpt.setVisible(false);
 		hostKeyLabelOpt.setLocation(202, 40);
 		hostKeyLabelOpt.setSize(60, 25);
 
@@ -210,7 +209,6 @@ public class CryptoChat extends JFrame {
 		hostKeyFieldOpt = new JTextField("superman");
 		hostKeyFieldOpt.setLocation(270, 40);
 		hostKeyFieldOpt.setSize(115, 25);
-		hostKeyFieldOpt.setVisible(false);
 		hostKeyFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		hostKeyFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
@@ -241,7 +239,6 @@ public class CryptoChat extends JFrame {
 		hostPhraseBoxOpt.setLocation(198, 100);
 		hostPhraseBoxOpt.setSize(180, 17);
 		hostPhraseBoxOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		hostPhraseBoxOpt.setVisible(false);
 		hostPhraseBoxOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (hostPhraseBoxOpt.isSelected()) {
@@ -257,7 +254,6 @@ public class CryptoChat extends JFrame {
 		hostPhraseFieldOpt.setLocation(202, 120);
 		hostPhraseFieldOpt.setSize(182, 25);
 		hostPhraseFieldOpt.setEnabled(false);
-		hostPhraseFieldOpt.setVisible(false);
 		hostPhraseFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		hostPhraseFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
@@ -279,7 +275,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the HOST start button.
 		hostStartButtonOpt = new JButton("<html><center><h1>Start!</h1></center></html>");
-		hostStartButtonOpt.setVisible(false);
 		hostStartButtonOpt.setLocation(200, 150);
 		hostStartButtonOpt.setSize(185, 33);
 		hostStartButtonOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -290,7 +285,6 @@ public class CryptoChat extends JFrame {
 					hostServer.start();
 					setHostOptCompsTo(false);
 					setStartCompsTo(false);
-					repaint();
 					setWinSizeTo(hostScreenSize);
 					setHostCompsTo(true);
 				} catch (IOException e) {
@@ -339,7 +333,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the JOIN ip label.
 		joinIPLabelOpt = new JLabel("Server ip:");
-		joinIPLabelOpt.setVisible(false);
 		joinIPLabelOpt.setLocation(10, 10);
 		joinIPLabelOpt.setSize(70, 25);
 
@@ -347,7 +340,6 @@ public class CryptoChat extends JFrame {
 		joinIPFieldOpt = new JTextField("localhost");
 		joinIPFieldOpt.setLocation(80, 10);
 		joinIPFieldOpt.setSize(115, 25);
-		joinIPFieldOpt.setVisible(false);
 		joinIPFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinIPFieldOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -357,7 +349,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the JOIN port label.
 		joinPortLabelOpt = new JLabel("Server port:");
-		joinPortLabelOpt.setVisible(false);
 		joinPortLabelOpt.setLocation(10, 40);
 		joinPortLabelOpt.setSize(70, 25);
 
@@ -365,7 +356,6 @@ public class CryptoChat extends JFrame {
 		joinPortFieldOpt = new JTextField("9229");
 		joinPortFieldOpt.setLocation(80, 40);
 		joinPortFieldOpt.setSize(115, 25);
-		joinPortFieldOpt.setVisible(false);
 		joinPortFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinPortFieldOpt.addKeyListener(new KeyListener() {
 			String input;
@@ -409,7 +399,6 @@ public class CryptoChat extends JFrame {
 
 		// Setting the JOIN key label.
 		joinKeyLabelOpt = new JLabel("8-letter key:");
-		joinKeyLabelOpt.setVisible(false);
 		joinKeyLabelOpt.setLocation(10, 70);
 		joinKeyLabelOpt.setSize(70, 25);
 
@@ -417,7 +406,6 @@ public class CryptoChat extends JFrame {
 		joinKeyFieldOpt = new JTextField("superman");
 		joinKeyFieldOpt.setLocation(80, 70);
 		joinKeyFieldOpt.setSize(115, 25);
-		joinKeyFieldOpt.setVisible(false);
 		joinKeyFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinKeyFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
@@ -448,7 +436,6 @@ public class CryptoChat extends JFrame {
 		joinPhraseBoxOpt.setLocation(6, 100);
 		joinPhraseBoxOpt.setSize(180, 17);
 		joinPhraseBoxOpt.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		joinPhraseBoxOpt.setVisible(false);
 		joinPhraseBoxOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (joinPhraseBoxOpt.isSelected()) {
@@ -464,7 +451,6 @@ public class CryptoChat extends JFrame {
 		joinPhraseFieldOpt.setLocation(10, 120);
 		joinPhraseFieldOpt.setSize(182, 25);
 		joinPhraseFieldOpt.setEnabled(false);
-		joinPhraseFieldOpt.setVisible(false);
 		joinPhraseFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinPhraseFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
@@ -492,12 +478,10 @@ public class CryptoChat extends JFrame {
 		joinStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				try {
-					System.out.println("ssssss");
 					joinServer = new CryptoClient(new Socket(joinIPFieldOpt.getText(), 9229));
-					System.out.println("zzzz");
+					joinServer.start();
 					setJoinOptCompsTo(false);
 					setStartCompsTo(false);
-					repaint();
 					setWinSizeTo(joinScreenSize);
 					setJoinCompsTo(true);
 				} catch (IOException e) {
@@ -578,11 +562,16 @@ public class CryptoChat extends JFrame {
 			}
 		});
 
+		hostUsersList = new JList<String>();
+		hostUsersList.setLocation(420, 10);
+		hostUsersList.setSize(120, 100);
+
 		// Add all the HOST-window components to the window.
 		add(hostChatTextboxFrame);
 		add(hostChatAlign);
 		add(hostChatLabel);
 		add(hostChatInputBox);
+		add(hostUsersList);
 	}
 
 	private void setupJoinScreen() {
@@ -702,6 +691,7 @@ public class CryptoChat extends JFrame {
 			hostChatTextboxFrame.setVisible(state);
 			hostChatTextbox.setVisible(state);
 			hostChatInputBox.setVisible(state);
+			hostUsersList.setVisible(state);
 		} catch (Exception e) {
 			System.out.println("D - " + e.getClass());
 		}

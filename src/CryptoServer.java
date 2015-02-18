@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class CryptoServer extends Thread {
 
@@ -38,25 +39,32 @@ public class CryptoServer extends Thread {
 	/**
 	 * Adds a chat member to the server.
 	 * 
-	 * @param socketMember
+	 * @param clientSocket
 	 *            The client that we want to add to the server.
 	 */
-	private void addChatMember(Socket socketMember) {
-		String ip = socketMember.getLocalAddress().getHostAddress();
+	private void addChatMember(Socket clientSocket) {
+		String ip = clientSocket.getLocalAddress().getHostAddress();
 		PrintStream clientStream = null;
 
 		try {
-			clientStream = new PrintStream(socketMember.getOutputStream());
+			clientStream = new PrintStream(clientSocket.getOutputStream());
 			// Check if the user is banned.
 			if (checkIfBanned(ip)) {
 				clientStream.print("you are banned!");
 				clientStream.flush();
-				clientStream.close();
-				closeConnection(socketMember, clientStream);
+				closeConnection(clientSocket, clientStream);
 				return;
 			}
 
-			CryptoClient cryptoClient = new CryptoClient(socketMember);
+			// Check if already connected.
+			if (isClientAlreadyConnected(clientSocket)) {
+				clientStream.print("you are already connected!");
+				clientStream.flush();
+				closeConnection(clientSocket, clientStream);
+				return;
+			}
+
+			CryptoClient cryptoClient = new CryptoClient(clientSocket);
 			String userSessionPhrase = cryptoClient.readMessage();
 			boolean isValidSessionPhrase = checkTheSessionPhrase(userSessionPhrase.getBytes());
 
@@ -66,7 +74,7 @@ public class CryptoServer extends Thread {
 				if (appearancesInProbation(ip) >= tries) {
 					removeFromProbation(ip);
 					addToBanned(ip);
-					closeConnection(socketMember, clientStream);
+					closeConnection(clientSocket, clientStream);
 					return;
 				}
 
@@ -74,8 +82,8 @@ public class CryptoServer extends Thread {
 				clientStream.print("you've been kicked! you have "
 						+ (tries - appearancesInProbation(ip)) + " more tries.");
 
-				// Kinda lame way to jump to the finally part.
-				throw new Exception();
+				// Close the connection.
+				closeConnection(clientSocket, clientStream);
 			}
 			// If successful remove from probation.
 			removeFromProbation(ip);
@@ -84,7 +92,7 @@ public class CryptoServer extends Thread {
 			cryptoClient.start();
 
 			// TODO Greet this current added client. IN CRYPTO !!!.
-			// "Welcome to the Crypto Server! There are " + usersList.size()
+			// "Welcome to the CryptoServer! There are " + usersList.size()
 			// + " users connected."
 
 			// Inform all chat members that the new client joined IN CRYPTO !!!.
@@ -93,15 +101,34 @@ public class CryptoServer extends Thread {
 			// Add the user to the list
 			synchronized (usersList) {
 				usersList.add(cryptoClient);
-				System.out.println(usersList);
+				if (CryptoChat.hostUsersList != null) {
+					CryptoChat.hostUsersList.setListData(getUsersIpArray());
+				}
 			}
 		} catch (Exception e) {
 		} finally {
 			try {
-				closeConnection(socketMember, clientStream);
+				closeConnection(clientSocket, clientStream);
 			} catch (Exception e) {
 			}
 		}
+	}
+
+	private boolean isClientAlreadyConnected(Socket clientSocket) {
+		for (CryptoClient curClient : usersList) {
+			if (curClient.getIp().equals(clientSocket.getInetAddress().getHostName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private String[] getUsersIpArray() {
+		String[] result = new String[usersList.size()];
+		for (int i = 0; i < usersList.size(); i++) {
+			result[i] = usersList.get(i).getIp();
+		}
+		return result;
 	}
 
 	private void closeConnection(Socket socketMember, PrintStream stream) {
