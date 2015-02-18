@@ -27,8 +27,12 @@ public class CryptoServer extends Thread {
 	public CryptoServer() throws IOException {
 		serverSocket = new ServerSocket(port);
 		usersList = new ArrayList<CryptoClient>();
-		bannedUsersList = new ArrayList<String>();
-		probationUsersList = new ArrayList<String>();
+		if (bannedUsersList == null) {
+			bannedUsersList = new ArrayList<String>();
+		}
+		if (probationUsersList == null) {
+			probationUsersList = new ArrayList<String>();
+		}
 	}
 
 	/**
@@ -53,7 +57,7 @@ public class CryptoServer extends Thread {
 			}
 
 			CryptoClient cryptoClient = new CryptoClient(socketMember);
-			String userSessionPhrase = cryptoClient.getMemberInput().readLine();
+			String userSessionPhrase = cryptoClient.readMessage();
 			boolean isValidSessionPhrase = checkTheSessionPhrase(userSessionPhrase.getBytes());
 
 			if (!isValidSessionPhrase) {
@@ -84,8 +88,13 @@ public class CryptoServer extends Thread {
 			// + " users connected."
 
 			// Inform all chat members that the new client joined IN CRYPTO !!!.
-			messageAllMembers(cryptoClient.getIp() + " joined" + System.lineSeparator());
-			usersList.add(cryptoClient);
+			messageAllMembers(cryptoClient.getIp() + " joined");
+
+			// Add the user to the list
+			synchronized (usersList) {
+				usersList.add(cryptoClient);
+				System.out.println(usersList);
+			}
 		} catch (Exception e) {
 		} finally {
 			try {
@@ -105,55 +114,68 @@ public class CryptoServer extends Thread {
 	}
 
 	boolean addToProbation(String ip) {
-		return probationUsersList.add(ip);
+		synchronized (probationUsersList) {
+			return probationUsersList.add(ip);
+		}
+
 	}
 
 	boolean addToBanned(String ip) {
-		return bannedUsersList.add(ip);
+		synchronized (bannedUsersList) {
+			return bannedUsersList.add(ip);
+		}
 	}
 
 	void removeFromProbation(String ip) {
-		for (int i = 0; i < probationUsersList.size(); i++) {
-			if (probationUsersList.get(i).equals(ip)) {
-				probationUsersList.remove(i);
-				i = -1; // Restart the check from the start.
+		synchronized (probationUsersList) {
+			for (int i = 0; i < probationUsersList.size(); i++) {
+				if (probationUsersList.get(i).equals(ip)) {
+					probationUsersList.remove(i);
+					i = -1; // Restart the check from the start.
+				}
 			}
 		}
 	}
 
 	void removeFromBannedList(String ip) {
-		for (int i = 0; i < bannedUsersList.size(); i++) {
-			if (bannedUsersList.get(i).equals(ip)) {
-				bannedUsersList.remove(i);
-				i = -1; // Restart the check from the start.
+		synchronized (bannedUsersList) {
+			for (int i = 0; i < bannedUsersList.size(); i++) {
+				if (bannedUsersList.get(i).equals(ip)) {
+					bannedUsersList.remove(i);
+					i = -1; // Restart the check from the start.
+				}
 			}
 		}
 	}
 
 	int appearancesInProbation(String ip) {
-		if (probationUsersList.isEmpty()) {
-			return 0;
-		}
-		int appearances = 0;
-		for (String s : probationUsersList) {
-			if (s.equals(ip)) {
-				appearances++;
+		synchronized (probationUsersList) {
+			if (probationUsersList.isEmpty()) {
+				return 0;
 			}
+			int appearances = 0;
+			for (String s : probationUsersList) {
+				if (s.equals(ip)) {
+					appearances++;
+				}
+			}
+			return appearances;
 		}
-		return appearances;
 	}
 
 	int appearancesInBanned(String ip) {
-		if (bannedUsersList.isEmpty()) {
-			return 0;
-		}
-		int appearances = 0;
-		for (String s : bannedUsersList) {
-			if (s.equals(ip)) {
-				appearances++;
+		synchronized (bannedUsersList) {
+			if (bannedUsersList.isEmpty()) {
+				return 0;
 			}
+			int appearances = 0;
+			for (String s : bannedUsersList) {
+				if (s.equals(ip)) {
+					appearances++;
+				}
+			}
+			return appearances;
 		}
-		return appearances;
 	}
 
 	boolean checkIfBanned(String ip) {
@@ -196,33 +218,59 @@ public class CryptoServer extends Thread {
 	 * @param member
 	 *            The member that we want to remove from the server.
 	 */
-	static void removeChatMember(CryptoClient member) {
+	void removeChatMember(CryptoClient member, int mode) {
 		synchronized (usersList) {
 			usersList.remove(member);
 		}
-		messageAllMembers(member.getIp() + " left the CryptoServer." + System.lineSeparator());
+		String response = " got kicked out of the CryptoServer.";
+		// if (mode == 0) just kick.
+		if (mode == 1) {
+			// Add to probation list.
+			addToProbation(member.getIp());
+			response = " got kicked and is on probation!";
+		} else if (mode == 2) {
+			// Add to banned list.
+			addToBanned(member.getIp());
+			response = " banned out of the CryptoServer.";
+		}
+
+		messageAllMembers(member.getIp() + response);
 	}
 
 	/**
 	 * Send a Massage to all connected users.
 	 * 
-	 * @param message
+	 * @param msg
 	 *            The message that we want to send to all the server's members.
+	 * @throws IOException
 	 */
-	static void messageAllMembers(String message) {
+	void messageAllMembers(String msg) {
 		synchronized (usersList) {
 			for (CryptoClient user : usersList) {
-				user.getMemberOutput().print(message);
-				user.getMemberOutput().flush();
+				try {
+					user.sendMessage(msg + System.lineSeparator());
+				} catch (IOException e) {
+				}
 			}
 		}
 	}
 
+	boolean closeServer() {
+		try {
+			serverSocket.close();
+			usersList.clear();
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
+	}
+
 	public void run() {
+		Socket newMemberSocket = null;
 		try {
 			// Handle a client login
 			while (true) {
-				Socket newMemberSocket = serverSocket.accept();
+				newMemberSocket = serverSocket.accept();
 				addChatMember(newMemberSocket);
 			}
 		} catch (IOException e) {
@@ -232,6 +280,7 @@ public class CryptoServer extends Thread {
 		} finally {
 			try {
 				serverSocket.close();
+				usersList.remove(newMemberSocket);
 			} catch (Exception e) {
 			}
 		}
