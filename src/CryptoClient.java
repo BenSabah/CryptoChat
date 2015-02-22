@@ -1,11 +1,11 @@
 import java.net.Socket;
-import java.io.IOException;
 import java.io.PrintStream;
+import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 /**
- * This class run handles the CryptoChat added clients.
+ * This class handles the clients that wants to add to the CryptoChat.
  * 
  * Happy cow says: "Muuuuuuu.."
  * 
@@ -13,18 +13,71 @@ import java.io.InputStreamReader;
  */
 
 public class CryptoClient extends Thread {
-
-	static int port;
 	private String ip;
 	private Socket socket;
-	private PrintStream streamOutput;
-	private BufferedReader streamInput;
+	private byte[] byteKey;
+	private PrintStream toHost;
+	private BufferedReader fromHost;
 
-	public CryptoClient(Socket socket) throws IOException {
-		this.socket = socket;
-		ip = socket.getInetAddress().getHostAddress();
-		streamOutput = new PrintStream(socket.getOutputStream());
-		streamInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+	public CryptoClient(String ip, int port, String strKey, String strPhrase) throws IOException {
+		this.ip = ip;
+		byteKey = strKey.getBytes();
+		socket = new Socket(ip, port);
+		toHost = new PrintStream(socket.getOutputStream(), true);
+		fromHost = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+		// Check if banned already.
+		String firstResponse = readMessage();
+
+		System.out.println(firstResponse);
+
+		// Send the session phrase to the host.
+		sendMessage(new String(Feistel.encrypt(strPhrase.getBytes(), byteKey)));
+
+		String secondResponse;
+		try {
+			// Get the returned message from the server.
+			secondResponse = readMessage();
+			// if disconnected it jumps here.
+			synchronized (CryptoChat.joinChatTextbox) {
+				CryptoChat.joinChatTextbox.append(secondResponse);
+			}
+		} catch (Exception e) {
+
+			throw new IOException(firstResponse);
+		}
+	}
+
+	public void run() {
+		String cryptoMSG;
+		String plainMSG;
+
+		// Keep receiving messages from the server IN CRYPTO-TEXT.
+		for (;;) {
+			try {
+				System.out.println("asdfsd");
+				cryptoMSG = readMessage();
+				plainMSG = new String(Feistel.decrypt(cryptoMSG.getBytes(), Feistel.key));
+				CryptoChat.joinChatTextbox.append(plainMSG);
+			} catch (IOException e) {
+				closeClient();
+			}
+		}
+	}
+
+	private void closeClient() {
+		try {
+			toHost.close();
+		} catch (Exception e) {
+		}
+		try {
+			fromHost.close();
+		} catch (Exception e) {
+		}
+		try {
+			socket.close();
+		} catch (Exception e) {
+		}
 	}
 
 	public String getIp() {
@@ -35,24 +88,19 @@ public class CryptoClient extends Thread {
 		return socket;
 	}
 
+	/**
+	 * This method blocks until there is something to read from the stream.
+	 * 
+	 * @return The string that the host sent.
+	 * @throws IOException
+	 *             is thrown when there's an issue while trying to read from the
+	 *             server.
+	 */
 	public String readMessage() throws IOException {
-		return streamInput.readLine();
+		return fromHost.readLine();
 	}
 
 	public void sendMessage(String msg) throws IOException {
-		streamOutput.write(msg.getBytes());
-		streamOutput.flush();
-	}
-
-	public void run() {
-		try {
-			
-		} catch (Exception e) {
-		} finally {
-			try {
-				socket.close();
-			} catch (IOException e) {
-			}
-		}
+		toHost.println(msg);
 	}
 }

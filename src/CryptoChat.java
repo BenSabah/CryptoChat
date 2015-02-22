@@ -32,18 +32,20 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.util.LinkedList;
 
 public class CryptoChat extends JFrame {
 	// General fields.
 	private static final long serialVersionUID = 4297662718521661000L;
 	Dimension startScreenSize = new Dimension(400, 220);
-	LinkedList<String> chatHistory = new LinkedList<String>();
-	static JPanel panel = new JPanel();
+	// static LinkedList<String> chatHistory = new LinkedList<String>();
+	JPanel panel = new JPanel();
 	String title = "CryptoChat";
 
 	// START-screen hosting components.
+	int hostPort = 9229;
+	String hostKey = "superman";
+	String hostPhrase = "This is the initial CryptoChat phrase";
+
 	JToggleButton serverButton;
 	JLabel hostPortLabelOpt;
 	JTextField hostPortFieldOpt;
@@ -54,6 +56,11 @@ public class CryptoChat extends JFrame {
 	JButton hostStartButtonOpt;
 
 	// START-screen join components.
+	String joinIp;
+	int joinPort = 9229;
+	String joinKey = "superman";
+	String joinPhrase = "This is the initial CryptoChat phrase";
+
 	JToggleButton joinButton;
 	JLabel joinIPLabelOpt;
 	JTextField joinIPFieldOpt;
@@ -72,7 +79,7 @@ public class CryptoChat extends JFrame {
 	JButton hostChatAlign;
 	boolean hostChatLTRAlignment = true;
 	JScrollPane hostChatTextboxFrame;
-	JTextArea hostChatTextbox;
+	static JTextArea hostChatTextbox;
 	JTextField hostChatInputBox;
 	static JList<String> hostUsersList;
 
@@ -83,10 +90,15 @@ public class CryptoChat extends JFrame {
 	JButton joinChatAlign;
 	boolean joinChatLTRAlignment = true;
 	JScrollPane joinChatTextboxFrame;
-	JTextArea joinChatTextbox;
+	static JTextArea joinChatTextbox;
 	JTextField joinChatInputBox;
 
-	public CryptoChat() {
+	public CryptoChat(String mode) {
+		// Set the IP to local-host if test
+		if (mode.equals("-test")) {
+			joinIp = "localhost";
+		}
+
 		// Setup main screen style, location and behavior.
 		try {
 			GuiUtils.setWinSevenStyle();
@@ -156,7 +168,7 @@ public class CryptoChat extends JFrame {
 		hostPortLabelOpt.setSize(60, 25);
 
 		// Setting the HOST port field.
-		hostPortFieldOpt = new JTextField(CryptoServer.port + "");
+		hostPortFieldOpt = new JTextField(hostPort + "");
 		hostPortFieldOpt.setLocation(270, 10);
 		hostPortFieldOpt.setSize(115, 25);
 		hostPortFieldOpt.setHorizontalAlignment(JLabel.CENTER);
@@ -168,10 +180,10 @@ public class CryptoChat extends JFrame {
 				input = hostPortFieldOpt.getText();
 				try {
 					// Fool-proofing the port input.
-					CryptoServer.port = Integer.parseInt(input);
-					if (CryptoServer.port > 65535) {
+					hostPort = Integer.parseInt(input);
+					if (hostPort > 65535) {
 						hostPortFieldOpt.setText("65535");
-						CryptoServer.port = 65535;
+						hostPort = 65535;
 					}
 				} catch (Exception e) {
 					if (input.length() > 1) {
@@ -250,14 +262,14 @@ public class CryptoChat extends JFrame {
 		});
 
 		// Setting the HOST Phrase field.
-		hostPhraseFieldOpt = new JTextField(new String(Feistel.sessionPhrase));
+		hostPhraseFieldOpt = new JTextField(hostPhrase);
 		hostPhraseFieldOpt.setLocation(202, 120);
 		hostPhraseFieldOpt.setSize(182, 25);
 		hostPhraseFieldOpt.setEnabled(false);
 		hostPhraseFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		hostPhraseFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
-				Feistel.sessionPhrase = hostPhraseFieldOpt.getText().getBytes();
+				hostPhrase = hostPhraseFieldOpt.getText();
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -281,14 +293,14 @@ public class CryptoChat extends JFrame {
 		hostStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				try {
-					hostServer = new CryptoServer();
+					hostServer = new CryptoServer(hostPort, hostKey, hostPhrase);
 					hostServer.start();
 					setHostOptCompsTo(false);
 					setStartCompsTo(false);
 					setWinSizeTo(hostScreenSize);
 					setHostCompsTo(true);
 				} catch (IOException e) {
-					GuiUtils.PopUpMessages.errorMsg("port " + CryptoServer.port
+					GuiUtils.PopUpMessages.errorMsg("port " + hostPort
 							+ " is already used!\nplease try using another port number.");
 					hostPortFieldOpt.requestFocus();
 				}
@@ -337,7 +349,7 @@ public class CryptoChat extends JFrame {
 		joinIPLabelOpt.setSize(70, 25);
 
 		// Setting the JOIN ip field.
-		joinIPFieldOpt = new JTextField("localhost");
+		joinIPFieldOpt = new JTextField(joinIp);
 		joinIPFieldOpt.setLocation(80, 10);
 		joinIPFieldOpt.setSize(115, 25);
 		joinIPFieldOpt.setHorizontalAlignment(JLabel.CENTER);
@@ -353,7 +365,7 @@ public class CryptoChat extends JFrame {
 		joinPortLabelOpt.setSize(70, 25);
 
 		// Setting the JOIN port field.
-		joinPortFieldOpt = new JTextField("9229");
+		joinPortFieldOpt = new JTextField(joinPort + "");
 		joinPortFieldOpt.setLocation(80, 40);
 		joinPortFieldOpt.setSize(115, 25);
 		joinPortFieldOpt.setHorizontalAlignment(JLabel.CENTER);
@@ -365,10 +377,10 @@ public class CryptoChat extends JFrame {
 				input = joinPortFieldOpt.getText();
 				try {
 					// Fool-proofing the port input.
-					CryptoClient.port = Integer.parseInt(input);
-					if (CryptoClient.port > 65535) {
+					joinPort = Integer.parseInt(input);
+					if (joinPort > 65535) {
 						joinPortFieldOpt.setText("65535");
-						CryptoClient.port = 65535;
+						joinPort = 65535;
 					}
 				} catch (Exception e) {
 					if (input.length() > 1) {
@@ -430,7 +442,7 @@ public class CryptoChat extends JFrame {
 			}
 		});
 
-		// Setting the HOST Phrase label.
+		// Setting the JOIN Phrase label.
 		joinPhraseBoxOpt = new JCheckBox("change default phrase:");
 		joinPhraseBoxOpt.setToolTipText("change the session phrase for extra security");
 		joinPhraseBoxOpt.setLocation(6, 100);
@@ -446,15 +458,15 @@ public class CryptoChat extends JFrame {
 			}
 		});
 
-		// Setting the HOST Phrase field.
-		joinPhraseFieldOpt = new JTextField(new String(Feistel.sessionPhrase));
+		// Setting the JOIN Phrase field.
+		joinPhraseFieldOpt = new JTextField(joinPhrase);
 		joinPhraseFieldOpt.setLocation(10, 120);
 		joinPhraseFieldOpt.setSize(182, 25);
 		joinPhraseFieldOpt.setEnabled(false);
 		joinPhraseFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinPhraseFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
-				Feistel.sessionPhrase = joinPhraseFieldOpt.getText().getBytes();
+				joinPhrase = joinPhraseFieldOpt.getText();
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -478,15 +490,14 @@ public class CryptoChat extends JFrame {
 		joinStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				try {
-					joinServer = new CryptoClient(new Socket(joinIPFieldOpt.getText(), 9229));
-					joinServer.start();
+					joinServer = new CryptoClient(joinIp, joinPort, joinKey, joinPhrase);
+//					joinServer.start();
 					setJoinOptCompsTo(false);
 					setStartCompsTo(false);
 					setWinSizeTo(joinScreenSize);
 					setJoinCompsTo(true);
 				} catch (IOException e) {
-					GuiUtils.PopUpMessages
-							.errorMsg("couldn't connect to server!\ncheck port and\\or ip");
+					GuiUtils.PopUpMessages.errorMsg(e.getMessage());
 				}
 			}
 		});
@@ -556,7 +567,7 @@ public class CryptoChat extends JFrame {
 				if (!s.isEmpty()) {
 					hostServer.messageAllMembers(s);
 					hostChatInputBox.setText("");
-					chatHistory.add(s + System.lineSeparator());
+					// chatHistory.add(s + System.lineSeparator());
 					hostChatTextbox.append(s + System.lineSeparator());
 				}
 			}
@@ -627,7 +638,7 @@ public class CryptoChat extends JFrame {
 					try {
 						joinServer.sendMessage(s);
 						joinChatInputBox.setText("");
-						chatHistory.add(s + System.lineSeparator());
+						// chatHistory.add(s + System.lineSeparator());
 						joinChatTextbox.append(s + System.lineSeparator());
 					} catch (IOException e1) {
 						GuiUtils.PopUpMessages.errorMsg("couldn't send the message");
@@ -742,6 +753,7 @@ public class CryptoChat extends JFrame {
 
 	@SuppressWarnings("unused")
 	public static void main(String[] args) {
-		CryptoChat gui = new CryptoChat();
+		String mode = args[0];
+		CryptoChat gui = new CryptoChat(mode);
 	}
 }
