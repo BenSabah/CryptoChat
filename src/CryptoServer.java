@@ -108,16 +108,15 @@ public class CryptoServer extends Thread {
 
 				// Report to HOST that kicked tried to connect.
 				synchronized (CryptoChat.hostChatTextbox) {
-					CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed."
-							+ System.lineSeparator());
+					CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed." + System.lineSeparator());
 				}
 				return;
 			}
 
 			// message the client that he is kicked.
 			if ((tries - appearancesInProbation(ip)) > 1) {
-				clientStream.println("you've been kicked! you have "
-						+ (tries - appearancesInProbation(ip)) + " more chances.");
+				clientStream.println("you've been kicked! you have " + (tries - appearancesInProbation(ip))
+						+ " more chances.");
 			} else {
 				clientStream.println("you've been kicked! you have 1 last chance.");
 			}
@@ -128,8 +127,7 @@ public class CryptoServer extends Thread {
 
 			// Report to HOST that kicked tried to connect.
 			synchronized (CryptoChat.hostChatTextbox) {
-				CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed."
-						+ System.lineSeparator());
+				CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed." + System.lineSeparator());
 			}
 			return;
 		}
@@ -140,8 +138,9 @@ public class CryptoServer extends Thread {
 		curClient.start();
 
 		// Greet this current added client. IN CRYPTO !!!.
-		String response = new String(Feistel.encrypt(("Welcome to the CryptoServer! There are "
-				+ usersList.size() + " users connected.").getBytes(), Feistel.key));
+		String response = new String(Feistel.encrypt(
+				("Welcome to the CryptoServer! There are " + usersList.size() + " users connected.").getBytes(),
+				Feistel.key));
 		curClient.sendToClient(response);
 
 		// Inform all chat members that the new client joined IN CRYPTO !!!.
@@ -280,7 +279,9 @@ public class CryptoServer extends Thread {
 	}
 
 	boolean isClientBanned(String ip) {
-		return appearancesInBanned(ip) > 0;
+		// TODO remove this after testing!
+		return false;
+		// return appearancesInBanned(ip) > 0;
 	}
 
 	boolean isClientOnProbation(String ip) {
@@ -297,13 +298,17 @@ public class CryptoServer extends Thread {
 		synchronized (usersList) {
 			usersList.remove(client);
 		}
-		if (mode == 1) {
+		if (mode == 0) {
+			// just kick as a warning.
+		} else if (mode == 1) {
 			// Add to probation list.
 			addToProbation(client.getIp());
+			client.sendToClient("You got kicked by the admin, and added to the probation list.");
 			messageAllMembers(client.getIp() + " got kicked and is on probation!");
 		} else if (mode == 2) {
 			// Add to banned list.
 			addToBanned(client.getIp());
+			client.sendToClient("You got banned by the admin.");
 			messageAllMembers(client.getIp() + " got banned from the CryptoServer.");
 		}
 		try {

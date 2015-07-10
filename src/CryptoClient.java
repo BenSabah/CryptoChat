@@ -29,10 +29,12 @@ public class CryptoClient extends Thread {
 		// Check if banned already.
 		String firstResponse = readMessage();
 
-		System.out.println(firstResponse);
+		System.out.println("111 - " + firstResponse + "\n");
 
 		// Send the session phrase to the host.
 		sendMessage(new String(Feistel.encrypt(strPhrase.getBytes(), byteKey)));
+
+		System.out.println("222 - " + firstResponse);
 
 		String secondResponse;
 		try {
