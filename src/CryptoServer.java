@@ -22,7 +22,8 @@ public class CryptoServer extends Thread {
 	ArrayList<String> probationUsersList;
 	int tries = 3;
 	boolean run;
-
+	String systemName = "SYSTEM";
+	
 	/**
 	 * This constructor starts the CryptoChat-Server, using the specified port &
 	 * session-phrase.
@@ -97,7 +98,7 @@ public class CryptoServer extends Thread {
 		curClient.sendToClient("Please enter the session phrase.");
 
 		// Check if the phrase is good.
-		if (!isGoodSessionPhrase(serverPhrase, curClient.readFromClient().getBytes())) {
+		if (!isSessionPhraseGood(serverPhrase, curClient.readFromClient().getBytes())) {
 			// add to Probation, check # of tries and kick if necessary.
 			addToProbation(ip);
 			if (appearancesInProbation(ip) >= tries) {
@@ -107,8 +108,8 @@ public class CryptoServer extends Thread {
 				closeClientConnection(socket);
 
 				// Report to HOST that kicked tried to connect.
-				synchronized (CryptoChat.hostChatTextbox) {
-					CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed." + System.lineSeparator());
+				synchronized (CryptoChat.hostChatHistoryBox) {
+					CryptoChat.hostChatHistoryBox.append(systemName, ip + ": tried to connect and failed.");
 				}
 				return;
 			}
@@ -126,8 +127,8 @@ public class CryptoServer extends Thread {
 			}
 
 			// Report to HOST that kicked tried to connect.
-			synchronized (CryptoChat.hostChatTextbox) {
-				CryptoChat.hostChatTextbox.append(ip + ": tried to connect and failed." + System.lineSeparator());
+			synchronized (CryptoChat.hostChatHistoryBox) {
+				CryptoChat.hostChatHistoryBox.append(systemName, ip + ": tried to connect and failed.");
 			}
 			return;
 		}
@@ -184,7 +185,7 @@ public class CryptoServer extends Thread {
 	 *            The phrase we want to compare to our encrypted phrase.
 	 * @return True if the given phrase is the same as ours, False otherwise.
 	 */
-	private boolean isGoodSessionPhrase(byte[] serverPhrase, byte[] phraseToCheck) {
+	private boolean isSessionPhraseGood(byte[] serverPhrase, byte[] phraseToCheck) {
 		// Check for different sizes first.
 		if (serverPhrase.length != phraseToCheck.length) {
 			return false;
@@ -279,12 +280,18 @@ public class CryptoServer extends Thread {
 	}
 
 	boolean isClientBanned(String ip) {
-		// TODO remove this after testing!
-		return false;
-		// return appearancesInBanned(ip) > 0;
+		if (CryptoChat.isTesting) {
+			System.out.println("gggg");
+			return false;
+		}
+		return appearancesInBanned(ip) > 0;
 	}
 
 	boolean isClientOnProbation(String ip) {
+		if (CryptoChat.isTesting) {
+			System.out.println("zdfsdf");
+			return false;
+		}
 		return appearancesInProbation(ip) > 0;
 	}
 
@@ -383,8 +390,8 @@ public class CryptoServer extends Thread {
 					// Get client Session Phrase.
 					cryptoMSG = readFromClient();
 					plainMSG = new String(Feistel.decrypt(cryptoMSG.getBytes(), Feistel.key));
-					synchronized (CryptoChat.hostChatTextbox) {
-						CryptoChat.hostChatTextbox.append(plainMSG);
+					synchronized (CryptoChat.hostChatHistoryBox) {
+						CryptoChat.hostChatHistoryBox.append(ip, plainMSG);
 					}
 				}
 			} catch (Exception e) {

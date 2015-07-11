@@ -7,7 +7,6 @@
  */
 
 import java.io.IOException;
-
 import java.awt.Font;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -25,6 +24,7 @@ import javax.swing.JLabel;
 import javax.swing.JFrame;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JScrollBar;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JScrollPane;
@@ -32,8 +32,6 @@ import javax.swing.JToggleButton;
 import javax.swing.border.LineBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 public class CryptoChat extends JFrame {
 	// General fields.
@@ -41,6 +39,7 @@ public class CryptoChat extends JFrame {
 	Dimension startScreenSize = new Dimension(400, 220);
 	// JPanel panel = new JPanel();
 	String title = "CryptoChat";
+	static boolean isTesting = false;
 
 	// START-screen hosting components.
 	int hostPort = 9229;
@@ -80,9 +79,11 @@ public class CryptoChat extends JFrame {
 	JButton hostChatAlign;
 	boolean hostChatLTRAlignment = true;
 	JScrollPane hostChatTextboxFrame;
-	static JTextArea hostChatTextbox;
+	// static JTextArea hostChatTextbox;
+	static ChatHistory hostChatHistoryBox = new ChatHistory();
 	JTextField hostChatInputBox;
 	static JList<String> hostUsersList;
+	String hostAdminName = "<html><b>Admin</b></html>";
 
 	// JOIN-screen settings and components.
 	Dimension joinScreenSize = new Dimension(426, 452);
@@ -97,6 +98,7 @@ public class CryptoChat extends JFrame {
 	public CryptoChat(String mode) {
 		// Set the IP to local-host if test
 		if (mode.equals("-test")) {
+			isTesting = true;
 			joinIp = "localhost";
 		}
 
@@ -456,7 +458,7 @@ public class CryptoChat extends JFrame {
 		// Setting the JOIN Phrase field.
 		joinPhraseFieldOpt = new JTextField(joinPhrase);
 		joinPhraseFieldOpt.setLocation(10, 120);
-		joinPhraseFieldOpt.setSize(185, 25);
+		joinPhraseFieldOpt.setSize(183, 25);
 		joinPhraseFieldOpt.setEnabled(false);
 		joinPhraseFieldOpt.setHorizontalAlignment(JLabel.CENTER);
 		joinPhraseFieldOpt.addKeyListener(new KeyListener() {
@@ -527,46 +529,24 @@ public class CryptoChat extends JFrame {
 				if (hostChatLTRAlignment) {
 					hostChatLTRAlignment = false;
 					hostChatAlign.setText("<html><b>RTL</b></html>");
-					hostChatTextbox.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+					hostChatHistoryBox.switchSides();
 					hostChatTextboxFrame.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 				} else {
 					hostChatLTRAlignment = true;
 					hostChatAlign.setText("<html><b>LTR</b></html>");
-					hostChatTextbox.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+					hostChatHistoryBox.switchSides();
 					hostChatTextboxFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 				}
 			}
 		});
 
 		// Setup the chat history window.
-		hostChatTextbox = new JTextArea();
-		hostChatTextbox.setLineWrap(true);
-		hostChatTextbox.setEditable(false);
-		hostChatTextbox.getDocument().addDocumentListener(new DocumentListener() {
-
-			@Override
-			public void removeUpdate(DocumentEvent e) {
-				// TODO Auto-generated method stub
-
-			}
-
-			@Override
-			public void insertUpdate(DocumentEvent e) {
-				// TODO Auto-generated method stub
-
-			}
-
-			@Override
-			public void changedUpdate(DocumentEvent e) {
-				// TODO Auto-generated method stub
-
-			}
-		});
-		hostChatTextboxFrame = new JScrollPane(hostChatTextbox);
+		hostChatHistoryBox.setFont(new Font(hostChatHistoryBox.getFont().getFontName(), hostChatHistoryBox.getFont()
+				.getStyle(), 12));
+		hostChatTextboxFrame = new JScrollPane(hostChatHistoryBox, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		hostChatTextboxFrame.setLocation(10, 25);
 		hostChatTextboxFrame.setSize(400, 355);
-		hostChatTextbox.setFont(new Font(hostChatTextbox.getFont().getFontName(), hostChatTextbox.getFont().getStyle(),
-				12));
 
 		// Setup the user input field.
 		hostChatInputBox = new JTextField();
@@ -576,12 +556,13 @@ public class CryptoChat extends JFrame {
 				.getStyle(), 12));
 		hostChatInputBox.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String s = hostChatInputBox.getText();
-				if (!s.isEmpty()) {
-					hostServer.messageAllMembers(s);
+				String msg = hostChatInputBox.getText();
+				if (!msg.trim().isEmpty()) {
+					hostServer.messageAllMembers(msg);
 					hostChatInputBox.setText("");
-					// chatHistory.add(s + System.lineSeparator());
-					hostChatTextbox.append(s + System.lineSeparator());
+					hostChatHistoryBox.append(hostAdminName, msg);
+					// hostChatTextboxFrame.requestFocus();
+					// hostChatHistoryBox.requestFocus();
 				}
 			}
 		});
@@ -711,7 +692,7 @@ public class CryptoChat extends JFrame {
 			hostChatLabel.setVisible(state);
 			hostChatAlign.setVisible(state);
 			hostChatTextboxFrame.setVisible(state);
-			hostChatTextbox.setVisible(state);
+			hostChatHistoryBox.setVisible(state);
 			hostChatInputBox.setVisible(state);
 			hostUsersList.setVisible(state);
 		} catch (Exception e) {
@@ -732,6 +713,12 @@ public class CryptoChat extends JFrame {
 	}
 
 	private void setWinSizeTo(Dimension dim) {
+		if (isTesting) {
+			setSize(dim);
+			setLocation((GuiUtils.getScreenWidth() - getWidth()) / 2, (GuiUtils.getsScreenHeight() - getHeight()) / 2);
+			return;
+		}
+
 		if (GuiUtils.getScreenWidth() <= dim.width || GuiUtils.getsScreenHeight() <= dim.height) {
 			return;
 		}
@@ -748,8 +735,7 @@ public class CryptoChat extends JFrame {
 				setSize(getWidth(), getHeight() - 1);
 			}
 
-			this.setLocation((GuiUtils.getScreenWidth() - this.getWidth()) / 2,
-					(GuiUtils.getsScreenHeight() - this.getHeight()) / 2);
+			setLocation((GuiUtils.getScreenWidth() - getWidth()) / 2, (GuiUtils.getsScreenHeight() - getHeight()) / 2);
 		}
 	}
 }
