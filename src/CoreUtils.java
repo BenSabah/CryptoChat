@@ -1,3 +1,6 @@
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
 /**
  * Utilities class holds all the needed functions to work with bits to apply
  * permutations and remove padding
@@ -7,6 +10,51 @@
  * @author Ben Sabah.
  */
 class CoreUtils {
+	static SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+
+	/**
+	 * This method returns the current time as a String.
+	 * 
+	 * @return The current time as a String (like HH:MM:SS).
+	 */
+	static String getTime() {
+		return dateFormat.format(Calendar.getInstance().getTime());
+	}
+
+	/**
+	 * This method checks if the given two byte arrays and return if they
+	 * contain the same bytes.
+	 * 
+	 * @param phraseToCheck
+	 *            The phrase we want to compare to our encrypted phrase.
+	 * @return True if the given phrase is the same as ours, False otherwise.
+	 */
+	static boolean cmprByteArray(byte[] serverPhrase, byte[] phraseToCheck) {
+		// Check for different sizes first.
+		if (serverPhrase.length != phraseToCheck.length) {
+			return false;
+		}
+
+		// Check each byte. return false if encounter a difference.
+		for (int i = 0; i < phraseToCheck.length; i++) {
+			if (serverPhrase[i] != phraseToCheck[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * This method remove any HTML tags from a give string.
+	 * 
+	 * @param strToClear
+	 *            The string we want to clear from HTML tags.
+	 * @return The cleared string.
+	 */
+	static String clearHtml(String strToClear) {
+		return strToClear.replaceAll("<[^>]*>", "");
+	}
+
 	/**
 	 * This function applies a bitwise-XOR over two byte vectors.
 	 * 
@@ -16,7 +64,6 @@ class CoreUtils {
 	 *            The array of bytes to be xor'ed with <code>byteArrA</code>
 	 * @return The result Xor'ed byte array
 	 */
-
 	static byte[] xor(byte[] byteArrA, byte[] byteArrB) {
 		byte[] result = new byte[byteArrA.length];
 

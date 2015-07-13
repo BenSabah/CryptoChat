@@ -22,8 +22,8 @@ public class CryptoServer extends Thread {
 	ArrayList<String> probationUsersList;
 	int tries = 3;
 	boolean run;
-	String systemName = "SYSTEM";
-	
+	String systemName = "<html><b>SYSTEM</b></html>";
+
 	/**
 	 * This constructor starts the CryptoChat-Server, using the specified port &
 	 * session-phrase.
@@ -96,9 +96,11 @@ public class CryptoServer extends Thread {
 		// Get the session phrase from the client.
 		Client curClient = new Client(socket);
 		curClient.sendToClient("Please enter the session phrase.");
+		byte[] userPhrase = curClient.readFromClient().getBytes();
 
 		// Check if the phrase is good.
-		if (!isSessionPhraseGood(serverPhrase, curClient.readFromClient().getBytes())) {
+		if (!CoreUtils.cmprByteArray(serverPhrase, userPhrase)) {
+
 			// add to Probation, check # of tries and kick if necessary.
 			addToProbation(ip);
 			if (appearancesInProbation(ip) >= tries) {
@@ -108,9 +110,7 @@ public class CryptoServer extends Thread {
 				closeClientConnection(socket);
 
 				// Report to HOST that kicked tried to connect.
-				synchronized (CryptoChat.hostChatHistoryBox) {
-					CryptoChat.hostChatHistoryBox.append(systemName, ip + ": tried to connect and failed.");
-				}
+				CryptoChat.hostChatHistBox.append(systemName, ip + " tried to connect and failed.");
 				return;
 			}
 
@@ -127,8 +127,8 @@ public class CryptoServer extends Thread {
 			}
 
 			// Report to HOST that kicked tried to connect.
-			synchronized (CryptoChat.hostChatHistoryBox) {
-				CryptoChat.hostChatHistoryBox.append(systemName, ip + ": tried to connect and failed.");
+			synchronized (CryptoChat.hostChatHistBox) {
+				CryptoChat.hostChatHistBox.append(systemName, ip + " tried to connect and failed.");
 			}
 			return;
 		}
@@ -175,29 +175,6 @@ public class CryptoServer extends Thread {
 			}
 			return result;
 		}
-	}
-
-	/**
-	 * This method checks if the given encrypted phrase the same as our
-	 * encrypted phrase.
-	 * 
-	 * @param phraseToCheck
-	 *            The phrase we want to compare to our encrypted phrase.
-	 * @return True if the given phrase is the same as ours, False otherwise.
-	 */
-	private boolean isSessionPhraseGood(byte[] serverPhrase, byte[] phraseToCheck) {
-		// Check for different sizes first.
-		if (serverPhrase.length != phraseToCheck.length) {
-			return false;
-		}
-
-		// Check each byte. return false if encounter a difference.
-		for (int i = 0; i < phraseToCheck.length; i++) {
-			if (serverPhrase[i] != phraseToCheck[i]) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	private void closeClientConnection(Socket socket) {
@@ -390,8 +367,8 @@ public class CryptoServer extends Thread {
 					// Get client Session Phrase.
 					cryptoMSG = readFromClient();
 					plainMSG = new String(Feistel.decrypt(cryptoMSG.getBytes(), Feistel.key));
-					synchronized (CryptoChat.hostChatHistoryBox) {
-						CryptoChat.hostChatHistoryBox.append(ip, plainMSG);
+					synchronized (CryptoChat.hostChatHistBox) {
+						CryptoChat.hostChatHistBox.append(ip, plainMSG);
 					}
 				}
 			} catch (Exception e) {

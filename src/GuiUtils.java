@@ -20,6 +20,17 @@ class GuiUtils {
 		return fc.getSelectedFile();
 	}
 
+	static File folderSelector() {
+		JFileChooser fc = new JFileChooser();
+		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		fc.setDialogTitle("Please select a folder");
+
+		if (fc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+			return fc.getSelectedFile();
+		}
+		return null;
+	}
+
 	/**
 	 * Calling this method tries to change the style of the JFrame that invoked
 	 * it to a Win7 style.
@@ -112,8 +123,7 @@ class GuiUtils {
 			String result = "";
 			Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 			Transferable contents = clipboard.getContents(null);
-			boolean hasTransferableText = (contents != null)
-					&& contents.isDataFlavorSupported(DataFlavor.stringFlavor);
+			boolean hasTransferableText = (contents != null) && contents.isDataFlavorSupported(DataFlavor.stringFlavor);
 			if (hasTransferableText) {
 				try {
 					result = (String) contents.getTransferData(DataFlavor.stringFlavor);
