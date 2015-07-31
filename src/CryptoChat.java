@@ -1,11 +1,3 @@
-/**
- * The class that runs and handles the CryptoChat window.
- * 
- * Happy cow says: "Muuuuuuu.."
- * 
- * @author Ben Sabah.
- */
-
 import java.io.IOException;
 
 import java.awt.Font;
@@ -25,7 +17,7 @@ import javax.swing.JLabel;
 import javax.swing.JFrame;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JTextArea;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
@@ -33,71 +25,99 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 
+/**
+ * The class that runs and handles the CryptoChat window.
+ * 
+ * Happy cow says: "Muuuuuuu.."
+ * 
+ * @author Ben Sabah.
+ */
+
 public class CryptoChat extends JFrame {
 	// General fields.
 	private static final long serialVersionUID = -4542806624866269957L;
 	Dimension startScreenSize = new Dimension(400, 220);
+	static JPanel panel = new JPanel();
 	String title = "CryptoChat";
+	String[] expFileName = { "History_Report", "xlsx" };
 	static boolean isTesting = false;
+	final String TESTING_IP = "localhost";
+	final int TESTING_PORT = 9229;
+	final String TESTING_KEY = "superman";
+	final String TESTING_PHRASE = "simple";
+	final String TESTING_USERNAME = "ME";
 
 	// START-screen hosting components.
-	int hostPort = 9229;
-	String hostKey = "superman";
-	String hostPhrase = "This is the initial CryptoChat phrase";
 	JToggleButton serverButton;
 	JLabel hostPortLabelOpt;
+	int hostPort;
 	JTextField hostPortFieldOpt;
 	JLabel hostKeyLabelOpt;
+	String hostKey;
 	JTextField hostKeyFieldOpt;
+	JLabel hostUsernameLabelOpt;
+	String hostUserName;
+	JTextField hostUsernameFieldOpt;
 	JCheckBox hostPhraseBoxOpt;
+	String hostPhrase = "This is the initial CryptoChat phrase";
 	JTextField hostPhraseFieldOpt;
 	JButton hostStartButtonOpt;
 
 	// START-screen join components.
-	String joinIp;
-	int joinPort = 9229;
-	String joinKey = "superman";
-	String joinPhrase = "This is the initial CryptoChat phrase";
 	JToggleButton joinButton;
 	JLabel joinIPLabelOpt;
+	String joinIp;
 	JTextField joinIPFieldOpt;
 	JLabel joinPortLabelOpt;
+	int joinPort;
 	JTextField joinPortFieldOpt;
 	JLabel joinKeyLabelOpt;
+	String joinKey;
 	JTextField joinKeyFieldOpt;
+	JLabel joinUsernameLabelOpt;
+	String joinUserName;
+	JTextField joinUsernameFieldOpt;
 	JCheckBox joinPhraseBoxOpt;
+	String joinPhrase = "This is the initial CryptoChat phrase";
 	JTextField joinPhraseFieldOpt;
 	JButton joinStartButtonOpt;
 
 	// HOSTING-screen settings and components.
 	Dimension hostScreenSize = new Dimension(700, 450);
-	String[] expFileName = { "History_Report", "xlsx" };
-	String hostAdminName = "<html><b>Admin</b></html>";
 	CryptoServer hostServer;
 	JLabel hostChatLabel;
-	JButton hostChatAlignButton;
 	boolean hostChatLTRAlignment = true;
-	JScrollPane hostChatTextboxFrame;
+	JButton hostChatAlignButton;
 	static ChatHistory hostChatHistBox;
+	JScrollPane hostChatHistBoxFrame;
 	JTextField hostChatInputBox;
 	static JList<String> hostUsersList;
-	JButton exportToFileButton;
+	JButton hostExportToFileButton;
 
 	// JOIN-screen settings and components.
-	Dimension joinScreenSize = new Dimension(426, 452);
+	Dimension joinScreenSize = new Dimension(426, 450);
 	CryptoClient joinServer;
 	JLabel joinChatLabel;
-	JButton joinChatAlign;
 	boolean joinChatLTRAlignment = true;
-	JScrollPane joinChatTextboxFrame;
-	static JTextArea joinChatTextbox;
+	JButton joinChatAlignButton;
+	JScrollPane joinChatHistBoxFrame;
+	static ChatHistory joinChatHistBox;
 	JTextField joinChatInputBox;
 
 	public CryptoChat(String mode) {
+		System.out.println(mode);
 		// Set the IP to local-host if test
 		if (mode.equals("-test")) {
 			isTesting = true;
-			joinIp = "localhost";
+			joinIp = TESTING_IP;
+			joinPort = TESTING_PORT;
+			joinKey = TESTING_KEY;
+			joinUserName = TESTING_USERNAME;
+			joinPhrase = TESTING_PHRASE;
+
+			hostPort = TESTING_PORT;
+			hostKey = TESTING_KEY;
+			hostPhrase = TESTING_PHRASE;
 		}
 
 		// Setup main screen style, location and behavior.
@@ -131,6 +151,8 @@ public class CryptoChat extends JFrame {
 		});
 
 		// Starting the window.
+		panel = new JPanel();
+		add(panel);
 		setVisible(true);
 	}
 
@@ -147,11 +169,13 @@ public class CryptoChat extends JFrame {
 			public void actionPerformed(ActionEvent event) {
 				if (serverButton.isSelected()) {
 					// show HOSTing options.
+					joinButton.setVisible(false);
 					setStartHostOptComponents(true);
 					setTitle(title + " - HOST a chat room");
 				} else {
 					// hide HOSTing options.
 					setStartHostOptComponents(false);
+					joinButton.setVisible(true);
 					setTitle(title);
 				}
 			}
@@ -213,7 +237,7 @@ public class CryptoChat extends JFrame {
 		hostKeyLabelOpt.setSize(60, 25);
 
 		// Setting the HOST key field.
-		hostKeyFieldOpt = new JTextField("superman");
+		hostKeyFieldOpt = new JTextField(hostKey);
 		hostKeyFieldOpt.setLocation(270, 40);
 		hostKeyFieldOpt.setSize(115, 25);
 		hostKeyFieldOpt.setHorizontalAlignment(JLabel.CENTER);
@@ -224,7 +248,7 @@ public class CryptoChat extends JFrame {
 					input = input.substring(0, 8);
 					hostKeyFieldOpt.setText(input);
 				}
-				Feistel.key = input.getBytes();
+				hostKey = input;
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -288,6 +312,9 @@ public class CryptoChat extends JFrame {
 		hostStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				try {
+					if (isTesting) {
+						System.out.println("running test server.");
+					}
 					hostServer = new CryptoServer(hostPort, hostKey, hostPhrase);
 					hostServer.start();
 					setStartHostOptComponents(false);
@@ -326,11 +353,13 @@ public class CryptoChat extends JFrame {
 			public void actionPerformed(ActionEvent event) {
 				if (joinButton.isSelected()) {
 					// show HOSTing options.
+					serverButton.setVisible(false);
 					setStartJoinOptComponents(true);
 					setTitle(title + " - JOIN a chat room");
 				} else {
 					// hide HOSTing options.
 					setStartJoinOptComponents(false);
+					serverButton.setVisible(true);
 					setTitle(title);
 				}
 			}
@@ -349,7 +378,6 @@ public class CryptoChat extends JFrame {
 		joinIPFieldOpt.addKeyListener(new KeyListener() {
 			private void update() {
 				joinIp = joinIPFieldOpt.getText();
-				System.out.println(joinIp);
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -421,7 +449,7 @@ public class CryptoChat extends JFrame {
 		joinKeyLabelOpt.setSize(70, 25);
 
 		// Setting the JOIN key field.
-		joinKeyFieldOpt = new JTextField("superman");
+		joinKeyFieldOpt = new JTextField(joinKey);
 		joinKeyFieldOpt.setLocation(80, 70);
 		joinKeyFieldOpt.setSize(115, 25);
 		joinKeyFieldOpt.setHorizontalAlignment(JLabel.CENTER);
@@ -432,7 +460,7 @@ public class CryptoChat extends JFrame {
 					input = input.substring(0, 8);
 					joinKeyFieldOpt.setText(input);
 				}
-				Feistel.key = input.getBytes();
+				joinKey = input;
 			}
 
 			public void keyTyped(KeyEvent e) {
@@ -496,8 +524,11 @@ public class CryptoChat extends JFrame {
 		joinStartButtonOpt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				try {
-					joinServer = new CryptoClient(joinIp, joinPort, joinKey, joinPhrase);
-					// joinServer.start();
+					if (isTesting) {
+						System.out.println("joinning test server.");
+					}
+					joinServer = new CryptoClient(joinIp, joinPort, joinKey, joinPhrase, joinUserName);
+					joinServer.start();
 					setStartJoinOptComponents(false);
 					setStartComponents(false);
 					setWinSizeTo(joinScreenSize);
@@ -537,25 +568,23 @@ public class CryptoChat extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				if (hostChatLTRAlignment) {
 					hostChatAlignButton.setText("<html><b>RTL</b></html>");
+					hostChatHistBoxFrame.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 					hostChatHistBox.switchSides();
-					hostChatTextboxFrame.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 				} else {
 					hostChatAlignButton.setText("<html><b>LTR</b></html>");
+					hostChatHistBoxFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 					hostChatHistBox.switchSides();
-					hostChatTextboxFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
 				}
 				hostChatLTRAlignment = !hostChatLTRAlignment;
 			}
 		});
 
 		// Setup the chat history window.
-		hostChatHistBox = new ChatHistory(21, 3);
-		hostChatHistBox.setFont(new Font(hostChatHistBox.getFont().getFontName(), hostChatHistBox.getFont().getStyle(),
-				12));
-		hostChatTextboxFrame = new JScrollPane(hostChatHistBox, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-		hostChatTextboxFrame.setLocation(10, 23);
-		hostChatTextboxFrame.setSize(400, 363);
+		hostChatHistBox = new ChatHistory();
+		hostChatHistBoxFrame = new JScrollPane(hostChatHistBox, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		hostChatHistBoxFrame.setSize(400, 365);
+		hostChatHistBoxFrame.setLocation(10, 23);
 
 		// Setup the user input field.
 		hostChatInputBox = new JTextField();
@@ -567,9 +596,9 @@ public class CryptoChat extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				String msg = hostChatInputBox.getText();
 				if (!msg.trim().isEmpty()) {
-					hostServer.messageAllMembers(msg);
+					hostServer.messageAllMembers(hostServer.getAdminName(), msg);
+					hostChatHistBox.append(CoreUtils.boldTextHTML(hostServer.getAdminName()), msg);
 					hostChatInputBox.setText("");
-					hostChatHistBox.append(hostAdminName, msg);
 				}
 			}
 		});
@@ -580,12 +609,12 @@ public class CryptoChat extends JFrame {
 		hostUsersList.setSize(120, 100);
 		// TODO FIX THIS !!!
 
-		exportToFileButton = new JButton("export history");
-		exportToFileButton.setLocation(420, 120);
-		exportToFileButton.setSize(120, 25);
-		exportToFileButton.setFont(new Font(exportToFileButton.getFont().getFontName(), exportToFileButton.getFont()
-				.getStyle(), 12));
-		exportToFileButton.addActionListener(new ActionListener() {
+		hostExportToFileButton = new JButton("export history");
+		hostExportToFileButton.setLocation(420, 120);
+		hostExportToFileButton.setSize(120, 25);
+		hostExportToFileButton.setFont(new Font(hostExportToFileButton.getFont().getFontName(), hostExportToFileButton
+				.getFont().getStyle(), 12));
+		hostExportToFileButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					String ExpRes = hostChatHistBox.exportToFile(GuiUtils.folderSelector(), expFileName[0],
@@ -597,12 +626,12 @@ public class CryptoChat extends JFrame {
 		});
 
 		// Add all the HOST-window components to the window.
-		add(hostChatTextboxFrame);
+		add(hostChatHistBoxFrame);
 		add(hostChatAlignButton);
 		add(hostChatLabel);
 		add(hostChatInputBox);
 		add(hostUsersList);
-		add(exportToFileButton);
+		add(hostExportToFileButton);
 	}
 
 	private void setupJoinScreen() {
@@ -612,36 +641,32 @@ public class CryptoChat extends JFrame {
 		joinChatLabel.setSize(100, 25);
 
 		// Setup the chat alignment button.
-		joinChatAlign = new JButton("<html><b>LTR</b></html>");
-		joinChatAlign.setLocation(380, 6);
-		joinChatAlign.setSize(30, 15);
-		joinChatAlign.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		joinChatAlign.setBorder(new CompoundBorder(null, new EmptyBorder(0, 0, 0, 0)));
-		joinChatAlign.addActionListener(new ActionListener() {
+		joinChatAlignButton = new JButton("<html><b>LTR</b></html>");
+		joinChatAlignButton.setLocation(380, 6);
+		joinChatAlignButton.setSize(30, 15);
+		joinChatAlignButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		joinChatAlignButton.setBorder(new CompoundBorder(null, new EmptyBorder(0, 0, 0, 0)));
+		joinChatAlignButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (joinChatLTRAlignment) {
-					joinChatLTRAlignment = false;
-					joinChatAlign.setText("<html><b>RTL</b></html>");
-					joinChatTextbox.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
-					joinChatTextboxFrame.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+					joinChatAlignButton.setText("<html><b>RTL</b></html>");
+					joinChatHistBoxFrame.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+					joinChatHistBox.switchSides();
 				} else {
-					joinChatLTRAlignment = true;
-					joinChatAlign.setText("<html><b>LTR</b></html>");
-					joinChatTextbox.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
-					joinChatTextboxFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+					joinChatAlignButton.setText("<html><b>LTR</b></html>");
+					joinChatHistBoxFrame.setComponentOrientation(ComponentOrientation.LEFT_TO_RIGHT);
+					joinChatHistBox.switchSides();
 				}
+				joinChatLTRAlignment = !joinChatLTRAlignment;
 			}
 		});
 
 		// Setup the chat history window.
-		joinChatTextbox = new JTextArea();
-		joinChatTextbox.setLineWrap(true);
-		joinChatTextbox.setEditable(false);
-		joinChatTextboxFrame = new JScrollPane(joinChatTextbox);
-		joinChatTextboxFrame.setLocation(10, 25);
-		joinChatTextboxFrame.setSize(400, 355);
-		joinChatTextbox.setFont(new Font(joinChatTextbox.getFont().getFontName(), joinChatTextbox.getFont().getStyle(),
-				12));
+		joinChatHistBox = new ChatHistory();
+		joinChatHistBoxFrame = new JScrollPane(joinChatHistBox, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+		joinChatHistBoxFrame.setSize(400, 365);
+		joinChatHistBoxFrame.setLocation(10, 23);
 
 		// Setup the user input field.
 		joinChatInputBox = new JTextField();
@@ -651,24 +676,19 @@ public class CryptoChat extends JFrame {
 				.getStyle(), 12));
 		joinChatInputBox.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String s = joinChatInputBox.getText();
-				if (!s.isEmpty()) {
-					try {
-						joinServer.sendMessage(s);
-						joinChatInputBox.setText("");
-						// chatHistory.add(s + System.lineSeparator());
-						joinChatTextbox.append(s + System.lineSeparator());
-					} catch (IOException e1) {
-						GuiUtils.PopUpMessages.errorMsg("couldn't send the message");
-					}
+				String msg = joinChatInputBox.getText();
+				if (!msg.trim().isEmpty()) {
+					joinServer.sendEncMsgToServer(joinUserName, msg);
+					joinChatHistBox.append(joinUserName, msg);
+					joinChatInputBox.setText("");
 				}
 			}
 		});
 
 		// Add all the HOST-window components to the window.
 		add(joinChatLabel);
-		add(joinChatAlign);
-		add(joinChatTextboxFrame);
+		add(joinChatAlignButton);
+		add(joinChatHistBoxFrame);
 		add(joinChatInputBox);
 	}
 
@@ -683,7 +703,6 @@ public class CryptoChat extends JFrame {
 
 	private void setStartHostOptComponents(boolean state) {
 		try {
-			joinButton.setVisible(!state);
 			hostPortLabelOpt.setVisible(state);
 			hostPortFieldOpt.setVisible(state);
 			hostKeyLabelOpt.setVisible(state);
@@ -698,7 +717,6 @@ public class CryptoChat extends JFrame {
 
 	private void setStartJoinOptComponents(boolean state) {
 		try {
-			serverButton.setVisible(!state);
 			joinIPLabelOpt.setVisible(state);
 			joinIPFieldOpt.setVisible(state);
 			joinPortLabelOpt.setVisible(state);
@@ -717,10 +735,11 @@ public class CryptoChat extends JFrame {
 		try {
 			hostChatLabel.setVisible(state);
 			hostChatAlignButton.setVisible(state);
-			hostChatTextboxFrame.setVisible(state);
+			hostChatHistBoxFrame.setVisible(state);
 			hostChatHistBox.setVisible(state);
 			hostChatInputBox.setVisible(state);
 			hostUsersList.setVisible(state);
+			hostExportToFileButton.setVisible(state);
 		} catch (Exception e) {
 			System.out.println("D - " + e.getClass());
 		}
@@ -728,9 +747,9 @@ public class CryptoChat extends JFrame {
 
 	private void setJoinComponents(boolean state) {
 		try {
-			joinChatAlign.setVisible(state);
+			joinChatAlignButton.setVisible(state);
 			joinChatLabel.setVisible(state);
-			joinChatTextboxFrame.setVisible(state);
+			joinChatHistBoxFrame.setVisible(state);
 			joinChatInputBox.setVisible(state);
 		} catch (Exception e) {
 			System.out.println("E - " + e.getClass());

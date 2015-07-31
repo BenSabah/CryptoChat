@@ -1,47 +1,168 @@
-import java.text.SimpleDateFormat;
+import java.util.Random;
 import java.util.Calendar;
 
+import java.nio.ByteBuffer;
+
+import java.text.SimpleDateFormat;
+
 /**
- * Utilities class holds all the needed functions to work with bits to apply
- * permutations and remove padding
+ * Utilities class, holds all the needed static functions.
  * 
  * Happy cow says: "Muuuuuuu.."
  * 
  * @author Ben Sabah.
  */
 class CoreUtils {
-	static SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+	private final static Random rnd = new Random();
+	private final static SimpleDateFormat dateFormatHM = new SimpleDateFormat("HH:mm:ss");
+	private final static SimpleDateFormat dateFormatHMS = new SimpleDateFormat("HH:mm:ss");
+	private final static String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJLMNOPQRSTUVWXYZ1234567890!@#$%^&*()_+";
 
 	/**
-	 * This method returns the current time as a String.
+	 * This method returns a string of random characters in the requested
+	 * length.
 	 * 
-	 * @return The current time as a String (like HH:MM:SS).
+	 * @param length
+	 *            The length of the string of random characters.
+	 * @return The string of random characters.
 	 */
-	static String getTime() {
-		return dateFormat.format(Calendar.getInstance().getTime());
+	static String getRandomString(int length) {
+		if (length < 0) {
+			throw new IllegalArgumentException("The requested string length should be > 0");
+		}
+		StringBuilder result = new StringBuilder();
+		while (length > 0) {
+			result.append(chars.charAt(rnd.nextInt(chars.length())));
+			length--;
+		}
+		return result.toString();
+	}
+
+	/**
+	 * 
+	 * This method returns the current time as a String.
+	 *
+	 * @param withSeconds
+	 *            Should the method return the time with seconds
+	 * @return The current time as a String (like HH:MM:SS or HH:MM).
+	 * 
+	 */
+	static String getTime(boolean withSeconds) {
+		if (withSeconds) {
+			return dateFormatHMS.format(Calendar.getInstance().getTime());
+		}
+		return dateFormatHM.format(Calendar.getInstance().getTime());
+	}
+
+	/**
+	 * This method concatenate all the bytes of any number of given byte arrays.
+	 * 
+	 * @param arrays
+	 *            The byte arrays.
+	 * @return The concatenated byte array of all the given byte arrays.
+	 */
+	static byte[] combineArrays(byte[]... arrays) {
+		// Calculating the number of byte we have in total.
+		int numOfBytes = 0;
+		for (int i = 0; i < arrays.length; i++) {
+			numOfBytes += arrays[i].length;
+		}
+
+		// Copy the bytes from each byte array into the result byte array.
+		byte[] result = new byte[numOfBytes];
+		int curPos = 0;
+		for (int i = 0; i < arrays.length; i++) {
+			System.arraycopy(arrays[i], 0, result, curPos, arrays[i].length);
+			curPos += arrays[i].length;
+		}
+		return result;
+	}
+
+	/**
+	 * This method converts an int number into a 4 byte array of that number.
+	 * 
+	 * @param x
+	 *            The int we want to convert to byte array.
+	 * @return The byte array of the given int.
+	 */
+	static byte[] intToBytes(int x) {
+		return ByteBuffer.allocate(4).putInt(x).array();
+	}
+
+	/**
+	 * This method converts an array of 8 bytes into a long.
+	 * 
+	 * @param bytes
+	 *            The array of bytes we want to convert to a long.
+	 * @return the long we converted from the given byte array.
+	 */
+	static int bytesToInt(byte[] bytes) {
+		if (bytes.length != 4) {
+			throw new IllegalArgumentException("The number of bytes != 4.");
+		}
+		return ByteBuffer.wrap(bytes).getInt();
+	}
+
+	/**
+	 * This method converts a long number into a 8 byte array of that number.
+	 * 
+	 * @param x
+	 *            The long we want to convert to byte array.
+	 * @return The byte array of the given long.
+	 */
+	static byte[] longToBytes(long x) {
+		return ByteBuffer.allocate(8).putLong(x).array();
+	}
+
+	/**
+	 * This method converts an array of 8 bytes into a long.
+	 * 
+	 * @param bytes
+	 *            The array of bytes we want to convert to a long.
+	 * @return the long we converted from the given byte array.
+	 */
+	static long bytesToLong(byte[] bytes) {
+		if (bytes.length != 8) {
+			throw new IllegalArgumentException("The number of bytes != 8.");
+		}
+		return ByteBuffer.wrap(bytes).getLong();
 	}
 
 	/**
 	 * This method checks if the given two byte arrays and return if they
 	 * contain the same bytes.
-	 * 
-	 * @param phraseToCheck
-	 *            The phrase we want to compare to our encrypted phrase.
+	 *
+	 * @param arrayA
+	 *            The array we want to compare with arrayB.
+	 * @param arrayB
+	 *            The array we want to compare with arrayA.
 	 * @return True if the given phrase is the same as ours, False otherwise.
 	 */
-	static boolean cmprByteArray(byte[] serverPhrase, byte[] phraseToCheck) {
+	static boolean cmprByteArray(byte[] arrayA, byte[] arrayB) {
 		// Check for different sizes first.
-		if (serverPhrase.length != phraseToCheck.length) {
+		if (arrayA.length != arrayB.length) {
 			return false;
 		}
 
 		// Check each byte. return false if encounter a difference.
-		for (int i = 0; i < phraseToCheck.length; i++) {
-			if (serverPhrase[i] != phraseToCheck[i]) {
+		for (int i = 0; i < arrayB.length; i++) {
+			if (arrayA[i] != arrayB[i]) {
 				return false;
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * This method surround any given text with the needed tags to make it bold
+	 * in HTML.
+	 * 
+	 * @param str
+	 *            The given string we want to add bold.
+	 * @return The given string with the HTML styling.
+	 */
+	static String boldTextHTML(String str) {
+		return String.format("<html><b>%s</b></html>", str);
 	}
 
 	/**
@@ -58,17 +179,20 @@ class CoreUtils {
 	/**
 	 * This function applies a bitwise-XOR over two byte vectors.
 	 * 
-	 * @param byteArrA
+	 * @param arrayA
 	 *            The array of bytes to be xor'ed with <code>byteArrB</code>
-	 * @param byteArrB
+	 * @param arrayB
 	 *            The array of bytes to be xor'ed with <code>byteArrA</code>
 	 * @return The result Xor'ed byte array
 	 */
-	static byte[] xor(byte[] byteArrA, byte[] byteArrB) {
-		byte[] result = new byte[byteArrA.length];
+	static byte[] xor(byte[] arrayA, byte[] arrayB) {
+		if (arrayA.length != arrayB.length) {
+			throw new IllegalArgumentException("The length of the 2 arrays is diffrent.");
+		}
+		byte[] result = new byte[arrayA.length];
 
-		for (int i = 0; i < byteArrA.length; i++) {
-			result[i] = (byte) (byteArrA[i] ^ byteArrB[i]);
+		for (int i = 0; i < arrayA.length; i++) {
+			result[i] = (byte) (arrayA[i] ^ arrayB[i]);
 		}
 
 		return result;
@@ -79,44 +203,51 @@ class CoreUtils {
 	 * 0, the method will change the bit of the given index (as if the bytes
 	 * were concatenated) to the given vale.
 	 * 
-	 * @param byteArr
+	 * @param array
 	 *            The byte array that needed a bit change.
 	 * @param index
 	 *            The index of the bit to change.
 	 * @param val
 	 *            The value (0 or 1) of the bit that we want to change to.
 	 */
-	static void setBit(byte[] byteArr, int index, int val) {
-		int whichByte = index / 8;
+	static void setBit(byte[] array, int index, int val) {
+		if (index > array.length * 8) {
+			throw new IndexOutOfBoundsException("The given index is > array.length * 8");
+		}
 		int whichBit = index % 8;
-		byte byteToModify = byteArr[whichByte];
+		int whichByte = index / 8;
+		byte byteToModify = array[whichByte];
 
 		byteToModify = (byte) (((0xFF7F >> whichBit) & byteToModify) & 0x00FF);
-		byteArr[whichByte] = (byte) ((val << (8 - (whichBit + 1))) | byteToModify);
+		array[whichByte] = (byte) ((val << (8 - (whichBit + 1))) | byteToModify);
 	}
 
 	/**
 	 * This function get array of bytes and an index, and returns the value of
 	 * that bit (as if the bytes were concatenated).
 	 * 
-	 * @param byteArr
+	 * @param array
 	 *            The array of bytes.
 	 * @param index
 	 *            The index of the bit we want to get.
 	 * @return The value of the bit in the given index.
 	 */
-	static int getBit(byte[] byteArr, int index) {
+	static int getBit(byte[] array, int index) {
+		if (index > array.length * 8) {
+			throw new IndexOutOfBoundsException("The given index is > array.length * 8");
+		}
+
 		int whichByte = index / 8;
 		int whichBit = index % 8;
 
-		return byteArr[whichByte] >> (8 - (whichBit + 1)) & 0x0001;
+		return array[whichByte] >> (8 - (whichBit + 1)) & 0x0001;
 	}
 
 	/**
-	 * This function get array of bytes a starting index and the number of bits
+	 * This function get array of bytes, a starting index and the number of bits
 	 * to copy and returns array of bytes with the request bits.
 	 * 
-	 * @param byteArr
+	 * @param array
 	 *            The array of bytes.
 	 * @param index
 	 *            The index from where to start copying the bits.
@@ -124,44 +255,75 @@ class CoreUtils {
 	 *            how many bits to return from the starting <code>index</code>.
 	 * @return The requested bits in an array of bytes.
 	 */
-	static byte[] getBits(byte[] byteArr, int index, int length) {
+	static byte[] getBits(byte[] array, int index, int length) {
+		if (index > array.length * 8) {
+			throw new IndexOutOfBoundsException("The given index is > array.length * 8");
+		}
+		if (length + index > array.length * 8) {
+			throw new IndexOutOfBoundsException("The given index + length > array.length * 8");
+		}
 		int numOfBytes = (length - 1) / 8 + 1;
 		byte[] result = new byte[numOfBytes];
 		int val;
 
 		for (int i = 0; i < length; i++) {
-			val = getBit(byteArr, index + i);
+			val = getBit(array, index + i);
 			setBit(result, i, val);
 		}
-
 		return result;
 	}
 
 	/**
-	 * /** This function concatenates the bits of 2 byte arrays.
+	 * This method return an array of bytes starting at a given index and at the
+	 * given length of the given array.
 	 * 
-	 * @param byteArrA
+	 * @param array
+	 *            The array we want to copy bytes off.
+	 * @param index
+	 *            The starting index we want to copy from.
+	 * @param length
+	 *            The number of bytes we want to copy.
+	 * @return The byte array containing the segment of bytes we asked for.
+	 */
+	static byte[] getBytes(byte[] array, int index, int length) {
+		if (index + length > array.length) {
+			throw new IndexOutOfBoundsException("Index + length > array.length");
+		}
+
+		byte[] result = new byte[length];
+		System.arraycopy(array, index, result, 0, length);
+		return result;
+	}
+
+	/**
+	 * This function concatenates the bits of 2 byte arrays.
+	 * 
+	 * @param arrayA
 	 *            The first byte array to copy from.
-	 * @param aLength
+	 * @param lengthA
 	 *            The number of bits to copy from the <code>byteArrA</code>.
-	 * @param byteArrB
+	 * @param arrayB
 	 *            The second byte array to copy from.
-	 * @param bLength
+	 * @param lengthB
 	 *            The number of bits to copy from the <code>byteArrA</code>.
 	 * @return The result byte array of the concatenation.
 	 */
-	static byte[] concatenateBits(byte[] byteArrA, int aLength, byte[] byteArrB, int bLength) {
-		int numOfBytes = (aLength + bLength - 1) / 8 + 1;
+	static byte[] concatenateBits(byte[] arrayA, int lengthA, byte[] arrayB, int lengthB) {
+		if (lengthA > arrayA.length * 8 || lengthB > arrayB.length * 8) {
+			throw new IndexOutOfBoundsException("The given length is > arrayA\\B.length * 8");
+		}
+
+		int numOfBytes = (lengthA + lengthB - 1) / 8 + 1;
 		byte[] result = new byte[numOfBytes];
 		int j = 0;
 		int val;
 
-		for (int i = 0; i < aLength; i++, j++) {
-			val = getBit(byteArrA, i);
+		for (int i = 0; i < lengthA; i++, j++) {
+			val = getBit(arrayA, i);
 			setBit(result, j, val);
 		}
-		for (int i = 0; i < bLength; i++, j++) {
-			val = getBit(byteArrB, i);
+		for (int i = 0; i < lengthB; i++, j++) {
+			val = getBit(arrayB, i);
 			setBit(result, j, val);
 		}
 
@@ -222,20 +384,20 @@ class CoreUtils {
 	 * indexing-table in-order to create a permutation. the "new" location of
 	 * bits is given in the table.
 	 * 
-	 * @param byteArr
+	 * @param array
 	 *            The byte array to rearrange.
 	 * @param table
 	 *            The indexing table that we use to rearrange the
 	 *            <code>byteArr</code>.
 	 * @return The permutation of the array.
 	 */
-	static byte[] permutation(byte[] byteArr, int[] table) {
+	static byte[] permutation(byte[] array, int[] table) {
 		int tableSize = (table.length - 1) / 8 + 1;
 		byte[] result = new byte[tableSize];
 		int val;
 
 		for (int i = 0; i < table.length; i++) {
-			val = getBit(byteArr, table[i] - 1);
+			val = getBit(array, table[i] - 1);
 			setBit(result, i, val);
 		}
 
@@ -246,20 +408,20 @@ class CoreUtils {
 	 * The function counts the size of the padding if the vector of bytes and
 	 * creates a new vector of bytes like the original just without the padding.
 	 * 
-	 * @param byteArr
+	 * @param array
 	 *            The array of bytes of which to remove the padding.
 	 * @return The array with its padding removed.
 	 */
-	static byte[] removePadding(byte[] byteArr) {
+	static byte[] removePadding(byte[] array) {
 		int paddingSize = 0;
-		int i = byteArr.length - 1;
+		int i = array.length - 1;
 
-		while (i >= 0 && byteArr[i] == 0) {
+		while (i >= 0 && array[i] == 0) {
 			paddingSize++;
 			i--;
 		}
-		byte[] result = new byte[byteArr.length - paddingSize - 1];
-		System.arraycopy(byteArr, 0, result, 0, result.length);
+		byte[] result = new byte[array.length - paddingSize - 1];
+		System.arraycopy(array, 0, result, 0, result.length);
 
 		return result;
 	}
@@ -298,14 +460,14 @@ class CoreUtils {
 	/**
 	 * This method gets a byte and return its string representation, for example
 	 * the following <code>byteToString((byte) 4)</code> will return the string
-	 * <code>00000101</code> This method is completely for testing purposes.
+	 * <code>00000101</code>.
 	 * 
-	 * @param a
+	 * @param b
 	 *            The byte to return as a string.
 	 * @return The string representing the byte.
 	 */
-	static String byteToString(byte a) {
-		String result = Integer.toBinaryString(Byte.toUnsignedInt(a));
+	static String byteToString(byte b) {
+		String result = Integer.toBinaryString(Byte.toUnsignedInt(b));
 
 		while (result.length() < 8) {
 			result = "0" + result;
@@ -317,23 +479,19 @@ class CoreUtils {
 	/**
 	 * This method gets an array of bytes and return their string
 	 * representation, for example the following
-	 * <code>byteToString(new byte[] {(byte) 4, (byte) 7})</code> will return
-	 * the string <code>0000010100000111</code> This method is completely for
-	 * testing purposes.
+	 * <code>byteArrToString(new byte[] {(byte) 4, (byte) 7})</code> will return
+	 * the string <code>0000010100000111</code>.
 	 * 
-	 * @param a
+	 * @param b
 	 *            The byte to return as a string.
 	 * @return The string representing the byte array.
 	 */
-	static String byteArrToString(byte[] a, boolean addSeparator) {
+	static String byteArrToString(byte[] b, boolean addSeparator) {
 		StringBuilder sb = new StringBuilder();
-
-		for (int i = 0; i < a.length; i++) {
-			sb.append(byteToString(a[i]) + '|');
+		for (int i = 0; i < b.length; i++) {
+			sb.append(byteToString(b[i]) + '|');
 		}
-
 		sb.deleteCharAt(sb.length() - 1);
-
 		return (addSeparator) ? sb.toString() : sb.toString().replace("|", "");
 	}
 }

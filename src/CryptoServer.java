@@ -1,3 +1,16 @@
+import java.util.Map;
+import java.util.Random;
+import java.util.HashMap;
+import java.util.ArrayList;
+
+import java.net.Socket;
+import java.net.ServerSocket;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 /**
  * This class run and handles the CryptoChat Server.
  * 
@@ -5,13 +18,6 @@
  * 
  * @author Ben Sabah.
  */
-import java.net.Socket;
-import java.net.ServerSocket;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.util.ArrayList;
 
 public class CryptoServer extends Thread {
 	ServerSocket serverSocket;
@@ -21,8 +27,14 @@ public class CryptoServer extends Thread {
 	ArrayList<String> bannedUsersList;
 	ArrayList<String> probationUsersList;
 	int tries = 3;
-	boolean run;
-	String systemName = "<html><b>SYSTEM</b></html>";
+	static boolean run;
+	Random rnd = new Random();
+	static final long ACCEPTABLE_TIME = 5000;
+	Map<Client, Integer> saltMap = new HashMap<Client, Integer>(32);
+	String adminName = "Admin";
+	String systemName = "SYSTEM";
+	String GREETING_FORMAT = "Hello %s, welcome to the CryptoServer! There %s %d %s connected";
+	private static final int START_SALT = 7557;
 
 	/**
 	 * This constructor starts the CryptoChat-Server, using the specified port &
@@ -38,6 +50,7 @@ public class CryptoServer extends Thread {
 	 */
 	public CryptoServer(int port, String strKey, String strPhrase) throws IOException {
 		this.port = port;
+		Feistel.key = strKey.getBytes();
 		serverPhrase = strPhrase.getBytes();
 		serverSocket = new ServerSocket(port);
 		usersList = new ArrayList<Client>();
@@ -57,13 +70,6 @@ public class CryptoServer extends Thread {
 			} catch (Exception e) {
 				// If clouldn't connect or add the client close and remove.
 				closeClientConnection(socket);
-				synchronized (usersList) {
-					for (Client curClient : usersList) {
-						if (curClient.getSocket() == socket) {
-							removeChatMember(curClient, 0);
-						}
-					}
-				}
 			}
 		}
 		closeServer();
@@ -77,89 +83,95 @@ public class CryptoServer extends Thread {
 	 * @throws IOException
 	 */
 	private void addChatMember(Socket socket) throws IOException {
+		// TODO make this thing to a runnable object to prevent DOS attacking.
 		String ip = socket.getLocalAddress().getHostAddress();
-		PrintStream clientStream = new PrintStream(socket.getOutputStream(), true);
 
 		// Check if the user is banned.
 		if (isClientBanned(ip)) {
-			clientStream.println("you are banned!");
 			closeClientConnection(socket);
+			System.out.println("failed at " + 1);
 			return;
 		}
 
 		// Check if already connected.
 		if (isClientAlreadyConnected(ip)) {
-			clientStream.println("you are already connected!");
+			closeClientConnection(socket);
+			System.out.println("failed at " + 2);
 			return;
 		}
 
-		// Get the session phrase from the client.
+		System.out.println("failed at " + 22);
+
+		// Send the user the welcoming message.
+		PrintStream clientStream = new PrintStream(socket.getOutputStream());
+		clientStream.println("Please enter the encrypted session phrase, you have " + tries + " tries.");
+		clientStream.flush();
 		Client curClient = new Client(socket);
-		curClient.sendToClient("Please enter the session phrase.");
-		byte[] userPhrase = curClient.readFromClient().getBytes();
 
-		// Check if the phrase is good.
-		if (!CoreUtils.cmprByteArray(serverPhrase, userPhrase)) {
+		System.out.println("b4 getting the ses phrase");
+		// Get the session phrase from the client.
+		if (CryptoChat.isTesting) {
+			curClient.sendEncMsgToClient("test", new String(serverPhrase));
+		}
 
-			// add to Probation, check # of tries and kick if necessary.
+		String[] data = curClient.readDecMsgFromClient();
+		if (data == null) {
+			System.out.println("fgffff");
+		}
+		System.out.println("after getting the ses phrase");
+
+		String userDecPhrase = data[1];
+
+		// Check if the ENCRYPTED phrase is bad.
+		if (data == null || !CoreUtils.cmprByteArray(serverPhrase, userDecPhrase.getBytes())) {
+			// Add to Probation
 			addToProbation(ip);
+
+			// Check the number of tries and ban if necessary.
 			if (appearancesInProbation(ip) >= tries) {
 				removeFromProbation(ip);
 				addToBanned(ip);
-				clientStream.println("too many bad tries, you are banned!");
+				clientStream.println("Too many bad tries, you are banned!");
+				clientStream.flush();
 				closeClientConnection(socket);
-
-				// Report to HOST that kicked tried to connect.
-				CryptoChat.hostChatHistBox.append(systemName, ip + " tried to connect and failed.");
+				if (ChatHistory.showVerbose) {
+					// Report to HOST that kicked tried to connect.
+					CryptoChat.hostChatHistBox.append(CoreUtils.boldTextHTML(systemName), "Banned: " + ip
+							+ " tried to connect and failed.");
+				}
+				System.out.println("failed at " + 3);
 				return;
 			}
 
-			// message the client that he is kicked.
-			if ((tries - appearancesInProbation(ip)) > 1) {
-				clientStream.println("you've been kicked! you have " + (tries - appearancesInProbation(ip))
-						+ " more chances.");
-			} else {
-				clientStream.println("you've been kicked! you have 1 last chance.");
-			}
+			// Message the client that he is kicked.
+			clientStream.println("you've been kicked! you have " + (tries - appearancesInProbation(ip))
+					+ " more chance\\s.");
+			clientStream.flush();
 			closeClientConnection(socket);
-			synchronized (usersList) {
-				usersList.remove(curClient);
+			if (ChatHistory.showVerbose) {
+				// Report to HOST that kicked tried to connect.
+				CryptoChat.hostChatHistBox.append(CoreUtils.boldTextHTML(systemName), "Kicked: " + ip
+						+ " tried to connect and failed.");
 			}
-
-			// Report to HOST that kicked tried to connect.
-			synchronized (CryptoChat.hostChatHistBox) {
-				CryptoChat.hostChatHistBox.append(systemName, ip + " tried to connect and failed.");
-			}
+			System.out.println("failed at " + 4);
 			return;
 		}
-		// If successful remove from probation.
-		removeFromProbation(ip);
 
-		// Start the connection.
+		// Since we passed the tests start the connection.
 		curClient.start();
 
-		// Greet this current added client. IN CRYPTO !!!.
-		String response = new String(Feistel.encrypt(
-				("Welcome to the CryptoServer! There are " + usersList.size() + " users connected.").getBytes(),
-				Feistel.key));
-		curClient.sendToClient(response);
-
-		// Inform all chat members that the new client joined IN CRYPTO !!!.
-		messageAllMembers(curClient.getIp() + " joined");
-
-		// Add the user to the list
-		synchronized (usersList) {
-			usersList.add(curClient);
-			if (CryptoChat.hostUsersList != null) {
-				CryptoChat.hostUsersList.setListData(getUsersIpArray());
-			}
-		}
+		// Remove from probation, add to the list of users & start the
+		// connection.
+		removeFromProbation(ip);
+		addToUsersList(curClient);
+		messageAllMembers(CoreUtils.boldTextHTML(adminName), ip + " joined the server.");
+		System.out.println("failed at " + 5);
 	}
 
 	private boolean isClientAlreadyConnected(String ip) {
 		synchronized (usersList) {
 			for (Client curClient : usersList) {
-				if (curClient.getIp().equals(ip)) {
+				if (curClient.ip.equals(ip)) {
 					return true;
 				}
 			}
@@ -167,11 +179,12 @@ public class CryptoServer extends Thread {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private String[] getUsersIpArray() {
 		synchronized (usersList) {
 			String[] result = new String[usersList.size()];
 			for (int i = 0; i < usersList.size(); i++) {
-				result[i] = usersList.get(i).getIp();
+				result[i] = usersList.get(i).ip;
 			}
 			return result;
 		}
@@ -192,19 +205,63 @@ public class CryptoServer extends Thread {
 		}
 	}
 
-	boolean addToProbation(String ip) {
+	public boolean addToUsersList(Client ip) {
+		synchronized (usersList) {
+			return usersList.add(ip);
+		}
+	}
+
+	public boolean addToProbation(String ip) {
 		synchronized (probationUsersList) {
 			return probationUsersList.add(ip);
 		}
 	}
 
-	boolean addToBanned(String ip) {
+	public boolean addToBanned(String ip) {
 		synchronized (bannedUsersList) {
 			return bannedUsersList.add(ip);
 		}
 	}
 
-	void removeFromProbation(String ip) {
+	/**
+	 * 
+	 * Removes the given client from the chat, and if needed send a kick\ban
+	 * message to that user.
+	 * 
+	 * @param client
+	 *            The client that we want to remove from the server.
+	 * @param mode
+	 *            The mode to remove the user, 0-custom, 1-kick and add to
+	 *            probation, 2-ban.
+	 */
+	public boolean removeFromUsersList(Client client, int mode) {
+		// TODO change to add kick method and custom msg.
+		boolean result;
+		synchronized (usersList) {
+			result = usersList.remove(client);
+		}
+		if (mode == 0) {
+			// just kick as a warning.
+		} else if (mode == 1) {
+			// Add to probation list.
+			addToProbation(client.ip);
+			client.sendEncMsgToClient(CoreUtils.boldTextHTML(adminName),
+					CoreUtils.boldTextHTML("You got kicked by the admin, and added to the probation list."));
+			messageAllMembers(CoreUtils.boldTextHTML(adminName),
+					CoreUtils.boldTextHTML(client.ip + " got kicked and is on probation!"));
+		} else if (mode == 2) {
+			// Add to banned list.
+			addToBanned(client.ip);
+			client.sendEncMsgToClient(CoreUtils.boldTextHTML(adminName),
+					CoreUtils.boldTextHTML("You got banned by the admin."));
+			messageAllMembers(CoreUtils.boldTextHTML(adminName),
+					CoreUtils.boldTextHTML(client.ip + " got banned from the CryptoServer."));
+		}
+		client.closeClient();
+		return result;
+	}
+
+	public void removeFromProbation(String ip) {
 		synchronized (probationUsersList) {
 			for (int i = 0; i < probationUsersList.size(); i++) {
 				if (probationUsersList.get(i).equals(ip)) {
@@ -215,7 +272,7 @@ public class CryptoServer extends Thread {
 		}
 	}
 
-	void removeFromBannedList(String ip) {
+	public void removeFromBannedList(String ip) {
 		synchronized (bannedUsersList) {
 			for (int i = 0; i < bannedUsersList.size(); i++) {
 				if (bannedUsersList.get(i).equals(ip)) {
@@ -256,69 +313,52 @@ public class CryptoServer extends Thread {
 		}
 	}
 
-	boolean isClientBanned(String ip) {
-		if (CryptoChat.isTesting) {
-			System.out.println("gggg");
+	private boolean isClientBanned(String ip) {
+		boolean isBanned = appearancesInBanned(ip) > 0;
+		if (CryptoChat.isTesting && isBanned) {
+			System.out.println(ip + ": should have been banned.");
 			return false;
 		}
-		return appearancesInBanned(ip) > 0;
+		return isBanned;
 	}
 
-	boolean isClientOnProbation(String ip) {
-		if (CryptoChat.isTesting) {
-			System.out.println("zdfsdf");
+	@SuppressWarnings("unused")
+	private boolean isClientOnProbation(String ip) {
+		boolean isKicked = appearancesInProbation(ip) > 0;
+		if (CryptoChat.isTesting && isKicked) {
+			System.out.println(ip + ": should have been kicked.");
 			return false;
 		}
-		return appearancesInProbation(ip) > 0;
-	}
-
-	/**
-	 * Removes the given client from the chat.
-	 * 
-	 * @param client
-	 *            The client that we want to remove from the server.
-	 */
-	void removeChatMember(Client client, int mode) {
-		synchronized (usersList) {
-			usersList.remove(client);
-		}
-		if (mode == 0) {
-			// just kick as a warning.
-		} else if (mode == 1) {
-			// Add to probation list.
-			addToProbation(client.getIp());
-			client.sendToClient("You got kicked by the admin, and added to the probation list.");
-			messageAllMembers(client.getIp() + " got kicked and is on probation!");
-		} else if (mode == 2) {
-			// Add to banned list.
-			addToBanned(client.getIp());
-			client.sendToClient("You got banned by the admin.");
-			messageAllMembers(client.getIp() + " got banned from the CryptoServer.");
-		}
-		try {
-			client.getSocket().close();
-		} catch (IOException e) {
-		}
+		return isKicked;
 	}
 
 	/**
 	 * Send a Massage to all connected users.
 	 * 
 	 * @param msg
-	 *            The plain massage to be encrypted and send.
+	 *            The plain massage to be encrypted and sent.
 	 */
-
-	void messageAllMembers(String msg) {
-		// Encrypt the message first.
-		String encMSG = new String(Feistel.encrypt(msg.getBytes(), Feistel.key));
+	public void messageAllMembers(String user, String msg) {
+		// Send the message to all the users.
 		synchronized (usersList) {
-			for (Client user : usersList) {
-				user.sendToClient(encMSG);
+			for (Client client : usersList) {
+				CryptoChat.hostChatHistBox.append(adminName, msg);
+				// TODO need to NOT send the msg to the original sender.
+				client.sendEncMsgToClient(user, msg);
 			}
 		}
 	}
 
-	void closeServer() {
+	public String getAdminName() {
+		return adminName;
+	}
+
+	public void setAdminName(String name) {
+		adminName = name;
+	}
+
+	public void closeServer() {
+		run = false;
 		try {
 			serverSocket.close();
 		} catch (Exception e) {
@@ -335,7 +375,6 @@ public class CryptoServer extends Thread {
 			bannedUsersList.clear();
 		} catch (Exception e) {
 		}
-		run = false;
 	}
 
 	public class Client extends Thread {
@@ -351,56 +390,159 @@ public class CryptoServer extends Thread {
 		private Socket socket;
 		private PrintStream toClient;
 		private BufferedReader fromClient;
+		private String userName;
+		private int salt = START_SALT;;
 
 		public Client(Socket socket) throws IOException {
 			ip = socket.getInetAddress().getHostAddress();
+			userName = ip;
 			this.socket = socket;
 			fromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			toClient = new PrintStream(socket.getOutputStream(), true);
+			toClient = new PrintStream(socket.getOutputStream());
 		}
 
 		public void run() {
+			// Use the try-catch to know when the client closed the connection.
 			try {
-				String cryptoMSG;
-				String plainMSG;
-				for (;;) {
-					// Get client Session Phrase.
-					cryptoMSG = readFromClient();
-					plainMSG = new String(Feistel.decrypt(cryptoMSG.getBytes(), Feistel.key));
-					synchronized (CryptoChat.hostChatHistBox) {
-						CryptoChat.hostChatHistBox.append(ip, plainMSG);
+				// Ask for user-name.
+				userName = new String(readDecMsgFromClient()[1]);
+				String greeting;
+
+				// Greet the new client.
+				if (usersList.size() == 1) {
+					greeting = String.format(GREETING_FORMAT, userName, "is", usersList.size(), "user");
+				} else {
+					greeting = String.format(GREETING_FORMAT, userName, "are", usersList.size(), "users");
+				}
+				sendEncMsgToClient(CoreUtils.boldTextHTML(adminName), greeting);
+
+				// Send the unique salt.
+				salt = rnd.nextInt(Integer.MAX_VALUE);
+				saltMap.put(this, salt);
+				sendEncMsgToClient(adminName, salt + "");
+
+				// Read messages from the client.
+				String[] incoming;
+				String user;
+				String msg;
+				while (true) {
+					incoming = readDecMsgFromClient();
+
+					// If the message is null (bad time-stamp) we close the
+					// connection.
+					if (incoming == null) {
+						break;
 					}
+
+					user = incoming[0];
+					msg = incoming[1];
+					CryptoChat.hostChatHistBox.append(user, msg);
+					messageAllMembers(user, msg);
 				}
 			} catch (Exception e) {
 			} finally {
-				removeChatMember(this, 0);
 				closeClient();
 			}
 		}
 
-		public String getIp() {
-			return ip;
+		/**
+		 * This method waits and reads a message the client set, than breaks it
+		 * up into 2 parts, the first part is the time-stamp, and the second
+		 * part is the message itself. if the time-stamp is wrong we return
+		 * null.
+		 * 
+		 * Thanks to Niki (rudi) for the muse.
+		 * 
+		 * @return the byte array of the given message, the first cell contains
+		 *         the user-name & the 2nd cell contains the message.
+		 * @throws IOException
+		 *             is thrown when there's an issue while trying to read from
+		 *             the server.
+		 */
+		public String[] readDecMsgFromClient() throws IOException {
+			int curIndex = 0;
+			byte[] decMsg;
+			if (CryptoChat.isTesting) {
+				decMsg = fromClient.readLine().getBytes();
+			} else {
+				decMsg = Feistel.decrypt(fromClient.readLine().getBytes(), Feistel.key);
+			}
+
+			// Check if the timing is acceptable.
+			long receivedTime = CoreUtils.bytesToLong(CoreUtils.getBytes(decMsg, curIndex, 8));
+			if (Math.abs(System.currentTimeMillis() - receivedTime) > ACCEPTABLE_TIME) {
+				System.out.println("msg failed at time");
+				return null;
+			}
+			curIndex += 8;
+
+			// Check if the salt is correct.
+			int salt = CoreUtils.bytesToInt(CoreUtils.getBytes(decMsg, curIndex, 4));
+			if (this.salt != salt) {
+				System.out.println("msg failed at salt");
+				return null;
+			}
+			curIndex += 4;
+
+			// Get the size of the user-name.
+			int sizeOfUserName = CoreUtils.bytesToInt(CoreUtils.getBytes(decMsg, curIndex, 4));
+			curIndex += 4;
+
+			// Get the user-name.
+			String user = new String(CoreUtils.getBytes(decMsg, curIndex, sizeOfUserName));
+			curIndex += sizeOfUserName;
+
+			// If passed all, return the message.
+			String msg = new String(CoreUtils.getBytes(decMsg, curIndex, decMsg.length - curIndex));
+			String[] result = { user, msg };
+			return result;
 		}
 
-		public Socket getSocket() {
-			return socket;
-		}
+		/**
+		 * This method add a time-stamp, the size of the user name, the
+		 * user-name, user-specific salt to the give message, encrypt it, than
+		 * it sends the combined message to the client.
+		 * 
+		 * Thanks to Niki (rudi) for the muse.
+		 * 
+		 * @param user
+		 *            The user that sent the message.
+		 * @param msg
+		 *            The message that the user wanted to send.
+		 */
+		public void sendEncMsgToClient(String user, String msg) {
+			// Add a time stamp, the size of the user-name, than the user-name
+			// itself, and the salt to the beginning of the message.
+			byte[] curTime = CoreUtils.longToBytes(System.currentTimeMillis());
+			byte[] sizeOfUser = CoreUtils.intToBytes(userName.length());
+			byte[] userName = user.getBytes();
+			byte[] saltNumber = CoreUtils.intToBytes(salt);
+			byte[] msgToSend = msg.getBytes();
 
-		public String readFromClient() throws IOException {
-			return fromClient.readLine();
-		}
+			// Combine the five parts.
+			byte[] combinedMsg = CoreUtils.combineArrays(curTime, sizeOfUser, userName, saltNumber, msgToSend);
 
-		public void sendToClient(String msg) {
-			toClient.println(msg);
+			// Send the combined encrypted Message to the client.
+			if (CryptoChat.isTesting) {
+				toClient.println(new String(combinedMsg));
+				toClient.flush();
+				return;
+			}
+			toClient.println(new String(Feistel.encrypt(combinedMsg, Feistel.key)));
+			toClient.flush();
 		}
 
 		private void closeClient() {
+			CryptoChat.joinChatHistBox.append(userName,
+					CoreUtils.boldTextHTML(usersList + " have been disconnected from the server."));
+			removeFromUsersList(this, 0);
+			saltMap.remove(this);
 			try {
-				toClient.close();
+				fromClient.close();
 			} catch (Exception e) {
 			}
 			try {
-				fromClient.close();
+				toClient.close();
 			} catch (Exception e) {
 			}
 			try {
